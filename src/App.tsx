@@ -572,6 +572,8 @@ export default function App() {
               onUpdatePegawai={handleUpdatePegawai}
               onDeletePegawai={handleDeletePegawai}
               onSelectPegawaiForSKGB={handleSelectPegawaiForSKGB}
+              settings={settings}
+              onLogActivity={handleLogActivity}
             />
           )}
 

@@ -53,8 +53,12 @@ export default function SettingsPanel({
   const [alamat, setAlamat] = useState(settings.kop.alamat);
   const [kontak, setKontak] = useState(settings.kop.kontak);
   const [kabupatenZip, setKabupatenZip] = useState(settings.kop.kabupatenZip);
-  const [logoType, setLogoType] = useState<"jabar" | "custom">(
-    settings.kop.logoUrl ? "custom" : "jabar"
+  const [logoType, setLogoType] = useState<"jabar" | "custom" | "upload">(
+    settings.kop.logoUrl && settings.kop.logoUrl.startsWith("data:")
+      ? "upload"
+      : settings.kop.logoUrl
+      ? "custom"
+      : "jabar"
   );
   const [logoUrl, setLogoUrl] = useState(settings.kop.logoUrl || "https://upload.wikimedia.org/wikipedia/commons/9/99/Coat_of_arms_of_West_Java.svg");
   const [useFullImage, setUseFullImage] = useState(settings.kop.useFullImage || false);
@@ -177,17 +181,58 @@ export default function SettingsPanel({
     setLogoUrl("https://upload.wikimedia.org/wikipedia/commons/9/99/Coat_of_arms_of_West_Java.svg");
   };
 
+  const compressAndSetImage = (
+    file: File,
+    maxWidth: number,
+    maxHeight: number,
+    quality: number,
+    onSuccess: (base64: string) => void
+  ) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate size keeping aspect ratio
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+          const compressed = canvas.toDataURL(mimeType, quality);
+          onSuccess(compressed);
+        }
+      };
+      if (e.target?.result) {
+        img.src = e.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFullKopUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setFullImageUrl(event.target.result as string);
-          onLogActivity("Upload Kop Surat", "Mengunggah gambar baru untuk Kop Surat utuh");
-        }
-      };
-      reader.readAsDataURL(file);
+      compressAndSetImage(file, 1200, 300, 0.8, (base64) => {
+        setFullImageUrl(base64);
+        onLogActivity("Upload Kop Surat", "Mengunggah gambar baru untuk Kop Surat utuh");
+      });
     }
   };
 
@@ -202,7 +247,7 @@ export default function SettingsPanel({
         alamat,
         kontak,
         kabupatenZip,
-        logoUrl: logoType === "custom" ? logoUrl : undefined,
+        logoUrl: (logoType === "custom" || logoType === "upload") ? logoUrl : undefined,
         useFullImage,
         fullImageUrl: useFullImage ? fullImageUrl : undefined
       },
@@ -425,8 +470,8 @@ export default function SettingsPanel({
                     
                     {/* Logo custom switcher */}
                     <div className="space-y-1.5">
-                      <span className="text-xs font-bold text-slate-705 block">Tipe Logo di Kop</span>
-                      <div className="grid grid-cols-2 gap-2 max-w-md">
+                      <span className="text-xs font-bold text-slate-750 block font-sans">Tipe Logo di Kop</span>
+                      <div className="grid grid-cols-3 gap-2 max-w-md">
                         <button
                           type="button"
                           onClick={() => setLogoType("jabar")}
@@ -436,7 +481,7 @@ export default function SettingsPanel({
                               : "bg-white border-slate-250 text-slate-600 hover:bg-slate-50"
                           }`}
                         >
-                          Logo Jawa Barat (SVG)
+                          Logo Jabar (SVG)
                         </button>
                         <button
                           type="button"
@@ -447,7 +492,18 @@ export default function SettingsPanel({
                               : "bg-white border-slate-250 text-slate-600 hover:bg-slate-50"
                           }`}
                         >
-                          Logo Custom (URL)
+                          URL Gambar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogoType("upload")}
+                          className={`py-2 text-xs font-bold rounded-xl transition-all border cursor-pointer ${
+                            logoType === "upload" 
+                              ? "bg-slate-900 border-slate-900 text-white" 
+                              : "bg-white border-slate-250 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Unggah File
                         </button>
                       </div>
                     </div>
@@ -464,6 +520,46 @@ export default function SettingsPanel({
                           className="w-full px-3.5 py-2.5 bg-white border border-slate-250 rounded-xl text-xs focus:border-indigo-500 focus:outline-none font-mono"
                         />
                         <span className="text-[10px] text-slate-400">Pastikan URL gambar valid dan dihosting pada layanan publik.</span>
+                      </div>
+                    )}
+
+                    {/* Custom Logo Upload inputs */}
+                    {logoType === "upload" && (
+                      <div className="space-y-1.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl animate-in slide-in-from-top-2">
+                        <label className="text-xs font-bold text-slate-700 block">📁 Unggah File Logo Kustom</label>
+                        <p className="text-[10px] text-slate-400 mb-1.5">Mendukung file logo instansi (PNG, JPG, JPEG, SVG) sebagai ganti logo Jawa Barat.</p>
+                        
+                        <div className="flex flex-wrap items-center gap-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id="kopLogoFileInput"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                compressAndSetImage(file, 200, 200, 0.85, (base64) => {
+                                  setLogoUrl(base64);
+                                  onLogActivity("Upload Logo KOP", `Berhasil mengunggah file logo KOP: ${file.name}`);
+                                });
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="kopLogoFileInput"
+                            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white transition-colors text-xs font-extrabold rounded-xl cursor-pointer border border-transparent shadow-sm inline-flex items-center gap-2"
+                          >
+                            <Image size={14} />
+                            <span>Pilih File Logo</span>
+                          </label>
+
+                          {logoUrl && logoUrl.startsWith("data:") && (
+                            <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                              <Check size={12} />
+                              <span>Siap Disimpan (File Lokal)</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -770,14 +866,10 @@ export default function SettingsPanel({
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  if (event.target?.result) {
-                                    setCustomTteLogoUrl(event.target.result as string);
-                                    onLogActivity("Simpan Spesimen TTE", `Berhasil mengunggah file gambar spesimen: ${file.name}`);
-                                  }
-                                };
-                                reader.readAsDataURL(file);
+                                compressAndSetImage(file, 400, 400, 0.85, (base64) => {
+                                  setCustomTteLogoUrl(base64);
+                                  onLogActivity("Simpan Spesimen TTE", `Berhasil mengunggah file gambar spesimen: ${file.name}`);
+                                });
                               }
                             }}
                             className="hidden"

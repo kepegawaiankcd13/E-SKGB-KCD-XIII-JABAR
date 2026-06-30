@@ -85,11 +85,13 @@ export default function SKGBForm({
       setIsManualInput(false);
       setActivePegId(selectedPegawai.id);
       loadTembusanForPeg(selectedPegawai);
+      setNomorSurat(selectedPegawai.noSuratBaru || settings.nomorSuratCounter);
     } else if (pegawaiList.length > 0 && !isManualInput) {
       setActivePegId(pegawaiList[0].id);
       loadTembusanForPeg(pegawaiList[0]);
+      setNomorSurat(pegawaiList[0].noSuratBaru || settings.nomorSuratCounter);
     }
-  }, [selectedPegawai, pegawaiList]);
+  }, [selectedPegawai, pegawaiList, settings]);
 
   // Handle setting defaults
   useEffect(() => {
@@ -114,7 +116,6 @@ export default function SKGBForm({
       setTembusanList([
         "Kepala Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
         "Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Jawa Barat di Bandung;",
-        "Kepala Sub Bagian Kepegawaian dan Umum Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
         "Kepala Sub Bagian Keuangan dan Aset Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
         `${peg.unitKerja || "Kepala SMA/SMK Bersangkutan"};`,
         "Pegawai Yang bersangkutan untuk diketahui dan digunakan seperlunya."
@@ -136,12 +137,14 @@ export default function SKGBForm({
       setIsManualInput(true);
       setActivePegId("manual");
       loadTembusanForPeg(manualPeg);
+      setNomorSurat(manualPeg.noSuratBaru || settings.nomorSuratCounter);
     } else {
       setIsManualInput(false);
       setActivePegId(pId);
       const peg = pegawaiList.find(p => p.id === pId);
       if (peg) {
         loadTembusanForPeg(peg);
+        setNomorSurat(peg.noSuratBaru || settings.nomorSuratCounter);
       }
     }
   };

@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useRef } from "react";
+import Swal from "sweetalert2";
 import { 
   Plus, 
   Search, 
@@ -22,11 +23,16 @@ import {
   Download,
   AlertCircle,
   Check,
-  AlertTriangle
+  AlertTriangle,
+  Paperclip,
+  Upload,
+  Eye,
+  Printer
 } from "lucide-react";
-import { Pegawai, KepegawaianType } from "../types";
+import { Pegawai, KepegawaianType, SystemSettings } from "../types";
 import * as XLSX from "xlsx";
 import { getSalaryByGolonganAndMasaKerja } from "../utils/salaryTable";
+import PrintTemplate from "./PrintTemplate";
 
 // Helper to determine if a pegawai profile is complete and ready to print
 const isDataLengkap = (peg: Pegawai): { valid: boolean; missingFields: string[] } => {
@@ -61,6 +67,8 @@ interface DatabaseGridProps {
   onUpdatePegawai: (id: string, updated: Pegawai) => void;
   onDeletePegawai: (id: string) => void;
   onSelectPegawaiForSKGB: (pegawai: Pegawai) => void;
+  settings: SystemSettings;
+  onLogActivity: (action: string, detail: string) => void;
 }
 
 export default function DatabaseGrid({ 
@@ -68,8 +76,13 @@ export default function DatabaseGrid({
   onAddPegawai, 
   onUpdatePegawai, 
   onDeletePegawai, 
-  onSelectPegawaiForSKGB 
+  onSelectPegawaiForSKGB,
+  settings,
+  onLogActivity
 }: DatabaseGridProps) {
+  
+  // Selection state for bulk printing
+  const [selectedPegawaiIds, setSelectedPegawaiIds] = useState<string[]>([]);
   
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,6 +125,7 @@ export default function DatabaseGrid({
 
   const [gajiPokokBaru, setGajiPokokBaru] = useState(0);
   const [pangkatGolonganBaru, setPangkatGolonganBaru] = useState("");
+  const [noSuratBaru, setNoSuratBaru] = useState("");
   const [mkTahunBaru, setMkTahunBaru] = useState(0);
   const [mkBulanBaru, setMkBulanBaru] = useState(0);
   const [tmtBaru, setTmtBaru] = useState("");
@@ -148,6 +162,145 @@ export default function DatabaseGrid({
     }
   };
 
+  const handleUploadKgbFile = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check size limit: 3MB
+    if (file.size > 3 * 1024 * 1024) {
+      Swal.fire({
+        title: "Ukuran Berkas Terlalu Besar!",
+        text: "Maksimal ukuran berkas yang diperbolehkan adalah 3 MB.",
+        icon: "error",
+        confirmButtonColor: "#e11d48"
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      const peg = pegawaiList.find((p) => p.id === id);
+      if (!peg) return;
+
+      const updated: Pegawai = {
+        ...peg,
+        kgbFileUrl: base64,
+        kgbFileName: file.name,
+        kgbUploadedAt: new Date().toISOString(),
+        statusKGB: "Selesai" // Mark as finished when file is uploaded
+      };
+
+      try {
+        onUpdatePegawai(id, updated);
+        Swal.fire({
+          title: "Dokumen Berhasil Diunggah!",
+          html: `Berkas <strong class="text-emerald-600">${file.name}</strong> berhasil diarsipkan dan status KGB guru ini diubah menjadi <strong class="text-indigo-600">Selesai</strong>.`,
+          icon: "success",
+          confirmButtonColor: "#10b981"
+        });
+      } catch (err) {
+        console.error(err);
+        Swal.fire({
+          title: "Gagal Mengunggah Berkas",
+          text: "Terjadi kesalahan saat menyimpan berkas ke server database cloud.",
+          icon: "error",
+          confirmButtonColor: "#e11d48"
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePreviewKgbFile = (peg: Pegawai) => {
+    if (!peg.kgbFileUrl) return;
+
+    const isPdf = peg.kgbFileUrl.startsWith("data:application/pdf");
+    const isImage = peg.kgbFileUrl.startsWith("data:image/");
+
+    let htmlContent = "";
+    if (isPdf) {
+      htmlContent = `<iframe src="${peg.kgbFileUrl}" class="w-full h-[520px] border border-slate-200 rounded-xl shadow-inner"></iframe>`;
+    } else if (isImage) {
+      htmlContent = `<div class="max-h-[520px] overflow-y-auto rounded-xl border border-slate-100 flex justify-center bg-slate-50 p-2 shadow-inner"><img src="${peg.kgbFileUrl}" alt="Arsip KGB" class="max-w-full h-auto rounded-md shadow-sm" /></div>`;
+    } else {
+      htmlContent = `<div class="p-6 text-center text-slate-500 font-medium">Pratinjau tidak didukung untuk tipe berkas ini. Silakan unduh langsung berkas tersebut.</div>`;
+    }
+
+    Swal.fire({
+      title: `<span class="text-sm font-extrabold text-slate-800 font-sans block truncate max-w-md">Arsip KGB Sah: ${peg.nama}</span>`,
+      html: `
+        <div class="text-left mb-3.5 select-none bg-slate-50 border border-slate-100 p-3 rounded-xl">
+          <p class="text-xs text-slate-500 font-sans">NIP Pegawai: <strong class="text-slate-800 font-mono">${peg.nip}</strong></p>
+          <p class="text-xs text-slate-500 font-sans mt-0.5">Nama Berkas: <strong class="text-slate-700">${peg.kgbFileName || "Dokumen_KGB.pdf"}</strong></p>
+          <p class="text-xs text-slate-500 font-sans mt-0.5">Diunggah Pada: <strong class="text-slate-700">${new Date(peg.kgbUploadedAt || "").toLocaleString("id-ID")}</strong></p>
+        </div>
+        ${htmlContent}
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Unduh Dokumen",
+      cancelButtonText: "Tutup Pratinjau",
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#64748b",
+      width: "850px"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const link = document.createElement("a");
+        link.href = peg.kgbFileUrl!;
+        link.download = peg.kgbFileName || `KGB_Sah_${peg.nip}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    });
+  };
+
+  const handleDeleteKgbFile = (peg: Pegawai) => {
+    Swal.fire({
+      title: "Hapus Arsip Berkas?",
+      html: `Apakah Anda yakin ingin menghapus berkas KGB sah untuk <strong class="text-slate-800">${peg.nama}</strong>? Status KGB akan otomatis diturunkan kembali menjadi tidak selesai.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus!",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#e11d48",
+      cancelButtonColor: "#475569"
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Determine automatic status
+        const today = new Date("2026-06-16");
+        const tmtDate = new Date(peg.tmtBaru || "2026-06-16");
+        const diffTime = tmtDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        let newStatus: "Selesai" | "Perlu Diproses" | "Mendekati Jatuh Tempo" | "Belum Selesai" = "Belum Selesai";
+        if (diffDays <= 0) {
+          newStatus = "Belum Selesai";
+        } else if (diffDays <= 90) {
+          newStatus = "Mendekati Jatuh Tempo";
+        } else {
+          newStatus = "Perlu Diproses";
+        }
+
+        const updated: Pegawai = {
+          ...peg,
+          kgbFileUrl: undefined,
+          kgbFileName: undefined,
+          kgbUploadedAt: undefined,
+          statusKGB: newStatus
+        };
+
+        onUpdatePegawai(peg.id, updated);
+        Swal.fire({
+          title: "Arsip Dihapus",
+          text: "Berkas arsip KGB sah berhasil dihapus dari server.",
+          icon: "success",
+          confirmButtonColor: "#4f46e5"
+        });
+      }
+    });
+  };
+
   // Helper to open form for editing or adding
   const openForm = (pegawai: Pegawai | null = null) => {
     if (pegawai) {
@@ -178,6 +331,7 @@ export default function DatabaseGrid({
 
       setGajiPokokBaru(pegawai.gajiPokokBaru);
       setPangkatGolonganBaru(pegawai.pangkatGolonganBaru || pegawai.pangkatGolongan);
+      setNoSuratBaru(pegawai.noSuratBaru || "");
       setMkTahunBaru(pegawai.mkTahunBaru);
       setMkBulanBaru(pegawai.mkBulanBaru);
       setTmtBaru(pegawai.tmtBaru);
@@ -213,6 +367,7 @@ export default function DatabaseGrid({
 
       setGajiPokokBaru(4169900);
       setPangkatGolonganBaru("PENATA Tk. I, III/d");
+      setNoSuratBaru("");
       setMkTahunBaru(18);
       setMkBulanBaru(0);
       setTmtBaru("");
@@ -450,11 +605,20 @@ export default function DatabaseGrid({
     const diffTime = tmtDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    let computedStatus: "Selesai" | "Perlu Diproses" | "Mendekati Jatuh Tempo" = "Selesai";
-    if (diffDays <= 0) {
-      computedStatus = "Perlu Diproses";
-    } else if (diffDays <= 90) { // under 3 months
-      computedStatus = "Mendekati Jatuh Tempo";
+    // Check if there is already an uploaded file (preserve it on edit)
+    const hasUploadedFile = editingPegawai?.kgbFileUrl ? true : false;
+    
+    let computedStatus: "Selesai" | "Perlu Diproses" | "Mendekati Jatuh Tempo" | "Belum Selesai" = "Belum Selesai";
+    if (hasUploadedFile) {
+      computedStatus = "Selesai";
+    } else {
+      if (diffDays <= 0) {
+        computedStatus = "Belum Selesai";
+      } else if (diffDays <= 90) { // under 3 months
+        computedStatus = "Mendekati Jatuh Tempo";
+      } else {
+        computedStatus = "Perlu Diproses";
+      }
     }
 
     const payload: Pegawai = {
@@ -486,7 +650,11 @@ export default function DatabaseGrid({
       mkBulanBaru: Number(mkBulanBaru),
       tmtBaru,
       tmtAkanDatang,
-      statusKGB: computedStatus
+      noSuratBaru: noSuratBaru || undefined,
+      statusKGB: computedStatus,
+      kgbFileUrl: editingPegawai?.kgbFileUrl || undefined,
+      kgbFileName: editingPegawai?.kgbFileName || undefined,
+      kgbUploadedAt: editingPegawai?.kgbUploadedAt || undefined,
     };
 
     if (editingPegawai) {
@@ -513,6 +681,18 @@ export default function DatabaseGrid({
     return matchesSearch;
   });
 
+  const triggerBulkPrint = () => {
+    const selectedNames = selectedPegawaiIds
+      .map(id => pegawaiList.find(p => p.id === id)?.nama)
+      .filter(Boolean)
+      .join(", ");
+    onLogActivity(
+      "Cetak Massal SKGB", 
+      `Mencetak Surat Keputusan Kenaikan Gaji Berkala secara massal untuk ${selectedPegawaiIds.length} pegawai: ${selectedNames}.`
+    );
+    window.print();
+  };
+
   const formatRupiah = (num: number) => {
     return new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -522,7 +702,8 @@ export default function DatabaseGrid({
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6 print:hidden">
       {/* Search and Quick Filters Header */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -609,16 +790,88 @@ export default function DatabaseGrid({
         </div>
       </div>
 
+      {/* Bulk Action Controls */}
+      {selectedPegawaiIds.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-150 p-4.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in slide-in-from-top-3 duration-200">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-2.5 bg-indigo-100 text-indigo-700 rounded-xl">
+              <Printer size={20} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-indigo-950">Mode Cetak Massal Aktif</h3>
+              <p className="text-xs text-indigo-700/80 mt-0.5">
+                Mencetak dokumen SKGB untuk <strong className="text-indigo-950 font-bold">{selectedPegawaiIds.length} pegawai</strong> sekaligus. Setiap surat dicetak pada lembar kertas F4 baru.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setSelectedPegawaiIds([])}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 border border-slate-200 hover:border-slate-300 bg-white rounded-xl transition-all cursor-pointer shadow-sm select-none"
+            >
+              Batalkan Pilihan
+            </button>
+            <button
+              onClick={() => {
+                const incompleteCount = selectedPegawaiIds.filter(id => {
+                  const p = pegawaiList.find(x => x.id === id);
+                  return p ? !isDataLengkap(p).valid : false;
+                }).length;
+
+                if (incompleteCount > 0) {
+                  Swal.fire({
+                    title: "Perhatian: Profil Belum Lengkap",
+                    text: `Ada ${incompleteCount} pegawai dengan data yang kurang lengkap di antara data terpilih. Anda tetap dapat melanjutkan cetak, namun beberapa isian berkas mungkin kosong.`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonText: "Tetap Lanjutkan Cetak",
+                    cancelButtonText: "Batal, Lengkapi Dulu",
+                    confirmButtonColor: "#4f46e5",
+                    cancelButtonColor: "#64748b"
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      triggerBulkPrint();
+                    }
+                  });
+                } else {
+                  triggerBulkPrint();
+                }
+              }}
+              className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-indigo-200 select-none"
+            >
+              <Printer size={14} className="stroke-[2.5]" />
+              <span>Cetak SKGB Terpilih ({selectedPegawaiIds.length})</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Database Table */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 text-xs font-bold uppercase tracking-wider">
-                <th className="p-4 pl-6">Profil Pegawai</th>
+                <th className="p-4 pl-6 w-12 text-center select-none">
+                  <input
+                    type="checkbox"
+                    checked={filteredList.length > 0 && filteredList.every(p => selectedPegawaiIds.includes(p.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedPegawaiIds(filteredList.map(p => p.id));
+                      } else {
+                        setSelectedPegawaiIds([]);
+                      }
+                    }}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                  />
+                </th>
+                <th className="p-4">Profil Pegawai</th>
                 <th className="p-4">Golongan / NIP</th>
                 <th className="p-4">Unit Kerja & Jabatan</th>
                 <th className="p-4">Masa Kerja & Gaji Lama</th>
+                <th className="p-4 text-emerald-800">KGB Baru (Nominal, MK, TMT)</th>
                 <th className="p-4">Status & Alur KGB</th>
                 <th className="p-4 text-center">Aksi Kendali</th>
               </tr>
@@ -626,7 +879,7 @@ export default function DatabaseGrid({
             <tbody className="divide-y divide-slate-100 text-sm">
               {filteredList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400">
+                  <td colSpan={8} className="p-8 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center space-y-2 py-6">
                       <div className="p-3 bg-slate-100 text-slate-400 rounded-full">
                         <UserPlus size={24} />
@@ -642,8 +895,24 @@ export default function DatabaseGrid({
                   const validation = isDataLengkap(peg);
                   return (
                     <tr key={peg.id} className="hover:bg-slate-50 transition-colors">
+                      {/* Checkbox selector column */}
+                      <td className="p-4 pl-6 text-center select-none">
+                        <input
+                          type="checkbox"
+                          checked={selectedPegawaiIds.includes(peg.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedPegawaiIds((prev) => [...prev, peg.id]);
+                            } else {
+                              setSelectedPegawaiIds((prev) => prev.filter((id) => id !== peg.id));
+                            }
+                          }}
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                        />
+                      </td>
+
                       {/* Profil Name */}
-                      <td className="p-4 pl-6">
+                      <td className="p-4">
                         <div className="flex items-center flex-wrap gap-1.5">
                           <div className="font-bold text-slate-900 leading-tight">{peg.nama}</div>
                           {validation.valid ? (
@@ -714,21 +983,76 @@ export default function DatabaseGrid({
                         </div>
                       </td>
 
-                      {/* Status / TMT */}
-                      <td className="p-4">
-                        <div className="text-xs text-slate-600">
-                          TMT: <span className="font-bold text-slate-800">{peg.tmtBaru}</span>
+                      {/* KGB Baru (Nominal, MK, TMT) */}
+                      <td className="p-4 bg-emerald-50/30">
+                        <div className="font-bold text-emerald-800">{formatRupiah(peg.gajiPokokBaru)}</div>
+                        <div className="text-slate-600 text-xs font-semibold mt-0.5">
+                          MK: {peg.mkTahunBaru}th {peg.mkBulanBaru}bl
                         </div>
-                        <div className="mt-1">
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                            peg.statusKGB === "Selesai"
-                              ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                              : peg.statusKGB === "Perlu Diproses"
-                              ? "bg-rose-50 text-rose-700 border border-rose-200 animate-pulse"
-                              : "bg-amber-50 text-amber-700 border border-amber-200"
-                          }`}>
-                            {peg.statusKGB}
-                          </span>
+                        <div className="text-[10px] text-emerald-950 font-bold mt-0.5 font-mono">
+                          TMT: {peg.tmtBaru}
+                        </div>
+                      </td>
+
+                      {/* Status / TMT & File Archive */}
+                      <td className="p-4 min-w-[180px]">
+                        <div className="text-[11px] text-slate-500 mb-1">
+                          TMT: <span className="font-bold text-slate-700">{peg.tmtBaru}</span>
+                        </div>
+                        <div className="flex flex-col space-y-1.5">
+                          <div>
+                            <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full inline-block ${
+                              peg.statusKGB === "Selesai"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : peg.statusKGB === "Belum Selesai"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200 animate-pulse-subtle"
+                                : peg.statusKGB === "Perlu Diproses"
+                                ? "bg-sky-50 text-sky-700 border border-sky-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200"
+                            }`}>
+                              {peg.statusKGB === "Selesai" ? "✓ Selesai" : peg.statusKGB}
+                            </span>
+                          </div>
+
+                          {/* Digital Archiving controls */}
+                          {peg.kgbFileUrl ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handlePreviewKgbFile(peg)}
+                                className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer flex-1 justify-center"
+                                title="Pratinjau & Unduh Dokumen Sah"
+                              >
+                                <Eye size={10} />
+                                <span className="truncate max-w-[100px]">{peg.kgbFileName || "Lihat KGB"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteKgbFile(peg)}
+                                className="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-md border border-rose-200 cursor-pointer transition-colors"
+                                title="Hapus Berkas Arsip"
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <input
+                                type="file"
+                                accept="application/pdf,image/*"
+                                id={`file-upload-${peg.id}`}
+                                className="hidden"
+                                onChange={(e) => handleUploadKgbFile(peg.id, e)}
+                              />
+                              <label
+                                htmlFor={`file-upload-${peg.id}`}
+                                className="inline-flex items-center gap-1 text-[10px] text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-2 py-1 rounded-md cursor-pointer font-bold transition-all w-full justify-center select-none"
+                              >
+                                <Upload size={10} />
+                                <span>Unggah KGB Sah</span>
+                              </label>
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -1204,6 +1528,17 @@ export default function DatabaseGrid({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5 col-span-1 md:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Nomor Surat Baru (KGB Baru) <span className="text-slate-400 font-normal lowercase">(Tidak wajib)</span></label>
+                        <input
+                          type="text"
+                          value={noSuratBaru}
+                          onChange={(e) => setNoSuratBaru(e.target.value)}
+                          placeholder="e.g. 800/KCD.14/KCD XIII atau dikosongkan"
+                          className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 text-slate-800"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5 col-span-1 md:col-span-2">
                         <label className="text-xs font-bold text-slate-700 uppercase">Pangkat / Golongan Baru *</label>
                         {formType === KepegawaianType.PPPK ? (
                           <select
@@ -1508,5 +1843,55 @@ export default function DatabaseGrid({
         </div>
       )}
     </div>
+
+    {/* Hidden printable templates for bulk printing */}
+    <div className="hidden print:block space-y-0 bg-white">
+      {selectedPegawaiIds.map((id) => {
+        const peg = pegawaiList.find((p) => p.id === id);
+        if (!peg) return null;
+
+        // Compute individual nomor surat
+        const nomorSurat = peg.noSuratBaru || settings.nomorSuratCounter;
+
+        // Compute today's date for print (format: YYYY-MM-DD)
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const d = String(today.getDate()).padStart(2, '0');
+        const tanggalSurat = `${y}-${m}-${d}`;
+
+        // Tembusan
+        const isPNS = !["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII"].includes(peg.pangkatGolongan);
+        const tembusanList = isPNS ? [
+          "Kepala Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+          "Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Jawa Barat di Bandung;",
+          "Kepala Sub Bagian Keuangan dan Aset Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+          `${peg.unitKerja || "Kepala SMA/SMK Bersangkutan"};`,
+          "Pegawai Yang bersangkutan untuk diketahui dan digunakan seperlunya."
+        ] : [
+          "Kepala Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+          "Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Jawa Barat di Bandung;",
+          "Kepala Subbag Tata Usaha Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+          "Pegawai Yang bersangkutan. Untuk diketahui dan digunakan seperlunya."
+        ];
+
+        return (
+          <div 
+            key={peg.id} 
+            className="print:m-0 print-page" 
+            style={{ pageBreakAfter: "always", breakAfter: "page" }}
+          >
+            <PrintTemplate
+              pegawai={peg}
+              settings={settings}
+              nomorSurat={nomorSurat}
+              tanggalSurat={tanggalSurat}
+              tembusanList={tembusanList}
+            />
+          </div>
+        );
+      })}
+    </div>
+  </>
   );
 }

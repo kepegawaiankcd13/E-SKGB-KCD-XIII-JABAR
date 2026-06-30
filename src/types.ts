@@ -43,8 +43,12 @@ export interface Pegawai {
   mkBulanBaru: number;
   tmtBaru: string; // YYYY-MM-DD
   tmtAkanDatang: string; // YYYY-MM-DD
+  noSuratBaru?: string; // Optional new document/letter number for KGB
   
-  statusKGB: "Selesai" | "Perlu Diproses" | "Mendekati Jatuh Tempo";
+  statusKGB: "Selesai" | "Perlu Diproses" | "Mendekati Jatuh Tempo" | "Belum Selesai";
+  kgbFileUrl?: string; // base64 pdf/image of finalized signed KGB document
+  kgbFileName?: string; // name of the file
+  kgbUploadedAt?: string; // ISO date of upload
 }
 
 export interface ActivityLog {

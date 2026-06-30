@@ -43,7 +43,7 @@ export default function Dashboard({
 
   // KGB status counters
   const kgbSelesai = pegawaiList.filter(p => p.statusKGB === "Selesai").length;
-  const kgbPerluProses = pegawaiList.filter(p => p.statusKGB === "Perlu Diproses").length;
+  const kgbPerluProses = pegawaiList.filter(p => p.statusKGB === "Perlu Diproses" || p.statusKGB === "Belum Selesai").length;
   const kgbMendekati = pegawaiList.filter(p => p.statusKGB === "Mendekati Jatuh Tempo").length;
 
   // Let's list upcoming KGB (due soon or expired)
@@ -205,7 +205,7 @@ export default function Dashboard({
               </div>
             ) : (
               upcomingKGBList.map((peg) => {
-                const isUrgent = peg.statusKGB === "Perlu Diproses";
+                const isUrgent = peg.statusKGB === "Perlu Diproses" || peg.statusKGB === "Belum Selesai";
                 return (
                   <div key={peg.id} className="p-4 hover:bg-slate-50 rounded-xl transition-all duration-150 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                     <div className="space-y-1">
@@ -231,8 +231,10 @@ export default function Dashboard({
 
                     <div className="flex items-center space-x-3 shrink-0">
                       <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                        isUrgent 
-                          ? "bg-rose-50 border-rose-200 text-rose-700" 
+                        peg.statusKGB === "Belum Selesai"
+                          ? "bg-rose-50 border-rose-200 text-rose-700 font-extrabold animate-pulse"
+                          : isUrgent 
+                          ? "bg-sky-50 border-sky-200 text-sky-700" 
                           : "bg-amber-50 border-amber-200 text-amber-700"
                       }`}>
                         {peg.statusKGB}

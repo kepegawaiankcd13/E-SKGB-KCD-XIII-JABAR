@@ -33,6 +33,7 @@
         "mkBulanBaru": { "type": "number" },
         "tmtBaru": { "type": "string" },
         "tmtAkanDatang": { "type": "string" },
+        "noSuratBaru": { "type": "string" },
         "statusKGB": { "type": "string" }
       },
       "required": ["id", "nama", "nip", "pangkatGolongan", "jabatan", "unitKerja"]
