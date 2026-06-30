@@ -57,6 +57,7 @@ export default function SKGBForm({
     tanggalLahir: "1981-09-05",
     nip: "198109052024211004",
     pangkatGolongan: "IX",
+    pangkatGolonganBaru: "IX",
     jabatan: "GURU AHLI PERTAMA - PPKN",
     unitKerja: "SMKN CIMERAK KABUPATEN PANGANDARAN",
     gajiPokokLama: 3203600,
@@ -155,7 +156,7 @@ export default function SKGBForm({
     const updated = { ...manualPeg, [field]: value };
     
     // Automatically recalculate if base attributes change
-    if (field === "skTglMulaiBerlaku" || field === "skMasaKerjaTahun" || field === "skMasaKerjaBulan" || field === "gajiPokokLama" || field === "hasPMK" || field === "pmkTahun" || field === "pmkBulan" || field === "pangkatGolongan") {
+    if (field === "skTglMulaiBerlaku" || field === "skMasaKerjaTahun" || field === "skMasaKerjaBulan" || field === "gajiPokokLama" || field === "hasPMK" || field === "pmkTahun" || field === "pmkBulan" || field === "pangkatGolongan" || field === "pangkatGolonganBaru") {
       const isPP = ["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII"].includes(updated.pangkatGolongan);
       
       const yearsAdded = 2 + (updated.hasPMK ? Number(updated.pmkTahun || 0) : 0);
@@ -170,7 +171,7 @@ export default function SKGBForm({
       // Automatically lookup old and new salaries from 2024 database unless they edited the salary directly
       if ((field as string) !== "gajiPokokLama" && (field as string) !== "gajiPokokBaru") {
         const calculatedGajiLama = getSalaryByGolonganAndMasaKerja(updated.pangkatGolongan, Number(updated.skMasaKerjaTahun || 0));
-        const calculatedGajiBaru = getSalaryByGolonganAndMasaKerja(updated.pangkatGolongan, Number(updated.mkTahunBaru || 0));
+        const calculatedGajiBaru = getSalaryByGolonganAndMasaKerja(updated.pangkatGolonganBaru || updated.pangkatGolongan, Number(updated.mkTahunBaru || 0));
         
         if (calculatedGajiLama > 0) {
           updated.gajiPokokLama = calculatedGajiLama;
@@ -180,7 +181,7 @@ export default function SKGBForm({
         }
       } else if (field === "gajiPokokLama" && updated.gajiPokokLama > 0) {
         // Fallback or legacy manual increase if they manually key in a custom old salary instead of using database
-        updated.gajiPokokBaru = getSalaryByGolonganAndMasaKerja(updated.pangkatGolongan, Number(updated.mkTahunBaru || 0)) || Math.round(Number(updated.gajiPokokLama) * 1.0314 / 100) * 100;
+        updated.gajiPokokBaru = getSalaryByGolonganAndMasaKerja(updated.pangkatGolonganBaru || updated.pangkatGolongan, Number(updated.mkTahunBaru || 0)) || Math.round(Number(updated.gajiPokokLama) * 1.0314 / 100) * 100;
       }
 
       if (updated.skTglMulaiBerlaku) {
@@ -342,6 +343,17 @@ export default function SKGBForm({
                     value={manualPeg.pangkatGolongan}
                     onChange={(e) => handleManualFieldChange("pangkatGolongan", e.target.value.toUpperCase())}
                     placeholder="e.g. IX atau PENATA III/c"
+                    className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded focus:outline-none focus:border-indigo-500 text-slate-800"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 block">Golongan Ruang Baru</label>
+                  <input
+                    type="text"
+                    value={manualPeg.pangkatGolonganBaru || manualPeg.pangkatGolongan}
+                    onChange={(e) => handleManualFieldChange("pangkatGolonganBaru", e.target.value.toUpperCase())}
+                    placeholder="e.g. X atau PENATA III/d"
                     className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded focus:outline-none focus:border-indigo-500 text-slate-800"
                   />
                 </div>

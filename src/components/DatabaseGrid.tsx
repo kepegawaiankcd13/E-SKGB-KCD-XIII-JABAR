@@ -111,6 +111,7 @@ export default function DatabaseGrid({
   const [pmkTanggal, setPmkTanggal] = useState("");
 
   const [gajiPokokBaru, setGajiPokokBaru] = useState(0);
+  const [pangkatGolonganBaru, setPangkatGolonganBaru] = useState("");
   const [mkTahunBaru, setMkTahunBaru] = useState(0);
   const [mkBulanBaru, setMkBulanBaru] = useState(0);
   const [tmtBaru, setTmtBaru] = useState("");
@@ -140,8 +141,10 @@ export default function DatabaseGrid({
     setFormType(type);
     if (type === KepegawaianType.PPPK) {
       setPangkatGolongan("IX");
+      setPangkatGolonganBaru("IX");
     } else {
       setPangkatGolongan("PENATA Tk. I, III/d");
+      setPangkatGolonganBaru("PENATA Tk. I, III/d");
     }
   };
 
@@ -174,6 +177,7 @@ export default function DatabaseGrid({
       setPmkTanggal(pegawai.pmkTanggal || "");
 
       setGajiPokokBaru(pegawai.gajiPokokBaru);
+      setPangkatGolonganBaru(pegawai.pangkatGolonganBaru || pegawai.pangkatGolongan);
       setMkTahunBaru(pegawai.mkTahunBaru);
       setMkBulanBaru(pegawai.mkBulanBaru);
       setTmtBaru(pegawai.tmtBaru);
@@ -208,6 +212,7 @@ export default function DatabaseGrid({
       setPmkTanggal("");
 
       setGajiPokokBaru(4169900);
+      setPangkatGolonganBaru("PENATA Tk. I, III/d");
       setMkTahunBaru(18);
       setMkBulanBaru(0);
       setTmtBaru("");
@@ -397,7 +402,7 @@ export default function DatabaseGrid({
 
     // Fetch from official database lookup
     const lookedUpGajiLama = getSalaryByGolonganAndMasaKerja(pangkatGolongan, Number(skMasaKerjaTahun));
-    const lookedUpGajiBaru = getSalaryByGolonganAndMasaKerja(pangkatGolongan, finalNewMKTahun);
+    const lookedUpGajiBaru = getSalaryByGolonganAndMasaKerja(pangkatGolonganBaru || pangkatGolongan, finalNewMKTahun);
 
     if (lookedUpGajiLama > 0) {
       setGajiPokokLama(lookedUpGajiLama);
@@ -459,6 +464,7 @@ export default function DatabaseGrid({
       tempatLahir,
       tanggalLahir,
       pangkatGolongan,
+      pangkatGolonganBaru: pangkatGolonganBaru || pangkatGolongan,
       jabatan,
       unitKerja,
       gajiPokokLama: Number(gajiPokokLama),
@@ -1197,6 +1203,31 @@ export default function DatabaseGrid({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5 col-span-1 md:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Pangkat / Golongan Baru *</label>
+                        {formType === KepegawaianType.PPPK ? (
+                          <select
+                            value={pangkatGolonganBaru}
+                            onChange={(e) => setPangkatGolonganBaru(e.target.value)}
+                            className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 font-bold text-slate-800"
+                          >
+                            {listGolonganPPPK.map((g) => (
+                              <option key={g} value={g}>Golongan {g}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <select
+                            value={pangkatGolonganBaru}
+                            onChange={(e) => setPangkatGolonganBaru(e.target.value)}
+                            className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 font-bold text-slate-800"
+                          >
+                            {listPangkatPNS.map((p) => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-700 uppercase">Gaji Pokok Baru (KGB Baru) *</label>
                         <input

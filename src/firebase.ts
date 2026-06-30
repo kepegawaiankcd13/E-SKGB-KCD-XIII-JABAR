@@ -97,10 +97,7 @@ export async function getPegawaiFromFirestore(): Promise<Pegawai[] | null> {
     return list;
   } catch (error) {
     console.error("Error reading pegawai from Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.GET, path);
-    }
-    return null;
+    handleFirestoreError(error, OperationType.GET, path);
   }
 }
 
@@ -112,10 +109,7 @@ export async function savePegawaiToFirestore(pegawai: Pegawai): Promise<boolean>
     return true;
   } catch (error) {
     console.error("Error saving pegawai to Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-    return false;
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
@@ -127,10 +121,7 @@ export async function deletePegawaiFromFirestore(id: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Error deleting pegawai from Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.DELETE, path);
-    }
-    return false;
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
 
@@ -147,10 +138,7 @@ export async function getSettingsFromFirestore(): Promise<SystemSettings | null>
     return null;
   } catch (error) {
     console.error("Error loading settings from Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.GET, path);
-    }
-    return null;
+    handleFirestoreError(error, OperationType.GET, path);
   }
 }
 
@@ -162,10 +150,7 @@ export async function saveSettingsToFirestore(settings: SystemSettings): Promise
     return true;
   } catch (error) {
     console.error("Error saving settings to Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-    return false;
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
@@ -183,10 +168,7 @@ export async function getLogsFromFirestore(): Promise<ActivityLog[] | null> {
     return list.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   } catch (error) {
     console.error("Error loading activity logs from Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.GET, path);
-    }
-    return null;
+    handleFirestoreError(error, OperationType.GET, path);
   }
 }
 
@@ -198,10 +180,7 @@ export async function saveLogToFirestore(log: ActivityLog): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Error saving log to Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-    return false;
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
@@ -219,10 +198,7 @@ export async function getStaffFromFirestore(): Promise<StaffUser[] | null> {
     return list;
   } catch (error) {
     console.error("Error loading staff from Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.GET, path);
-    }
-    return null;
+    handleFirestoreError(error, OperationType.GET, path);
   }
 }
 
@@ -234,10 +210,7 @@ export async function saveStaffToFirestore(staff: StaffUser): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Error saving staff to Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-    return false;
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
@@ -249,10 +222,7 @@ export async function deleteStaffFromFirestore(id: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Error deleting staff from Firestore:", error);
-    if (error instanceof Error && (error.message.includes("permission") || error.message.includes("Permission"))) {
-      handleFirestoreError(error, OperationType.DELETE, path);
-    }
-    return false;
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 }
 

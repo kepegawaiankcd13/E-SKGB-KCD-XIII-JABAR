@@ -311,7 +311,7 @@ export default function PrintTemplate({
             <span className="w-6 shrink-0 inline-block">9.</span>
             <span className="w-72 shrink-0 inline-block uppercase text-black">DALAM PANGKAT/GOLONGAN RUANG</span>
             <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-bold text-black uppercase flex-1">{pegawai.pangkatGolongan}</span>
+            <span className="font-bold text-black uppercase flex-1">{pegawai.pangkatGolonganBaru || pegawai.pangkatGolongan}</span>
           </div>
 
           <div className="flex items-start">

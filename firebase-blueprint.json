@@ -28,6 +28,7 @@
         "pmkNomor": { "type": "string" },
         "pmkTanggal": { "type": "string" },
         "gajiPokokBaru": { "type": "number" },
+        "pangkatGolonganBaru": { "type": "string" },
         "mkTahunBaru": { "type": "number" },
         "mkBulanBaru": { "type": "number" },
         "tmtBaru": { "type": "string" },
