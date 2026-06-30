@@ -38,6 +38,7 @@ export interface Pegawai {
 
   // Data Kenaikan Gaji Berkala (Baru)
   pangkatGolonganBaru?: string;
+  jabatanBaru?: string;
   gajiPokokBaru: number; // e.g. 3304400
   mkTahunBaru: number;
   mkBulanBaru: number;

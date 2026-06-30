@@ -46,6 +46,35 @@ export default function Dashboard({
   const kgbPerluProses = pegawaiList.filter(p => p.statusKGB === "Perlu Diproses" || p.statusKGB === "Belum Selesai").length;
   const kgbMendekati = pegawaiList.filter(p => p.statusKGB === "Mendekati Jatuh Tempo").length;
 
+  // Golongan (Pangkat) distribution for Top 4
+  const golonganCounts: { [key: string]: number } = {};
+  pegawaiList.forEach(p => {
+    // Simplify name or use directly
+    const gol = p.pangkatGolongan.includes(",") ? p.pangkatGolongan.split(",")[1].trim() : p.pangkatGolongan;
+    golonganCounts[gol] = (golonganCounts[gol] || 0) + 1;
+  });
+  const sortedGolongan = Object.entries(golonganCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+
+  // Unit Kerja (Sekolah) distribution for Top 4
+  const unitCounts: { [key: string]: number } = {};
+  pegawaiList.forEach(p => {
+    const unit = p.unitKerja || "Lainnya";
+    unitCounts[unit] = (unitCounts[unit] || 0) + 1;
+  });
+  const sortedUnit = Object.entries(unitCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+
+  // Calculations for stacked status bar
+  const totalStatus = kgbSelesai + kgbPerluProses + kgbMendekati || 1;
+  const pctSelesai = Math.round((kgbSelesai / totalStatus) * 100);
+  const pctPerluProses = Math.round((kgbPerluProses / totalStatus) * 100);
+  const pctMendekati = Math.round((kgbMendekati / totalStatus) * 100);
+
   // Let's list upcoming KGB (due soon or expired)
   const upcomingKGBList = pegawaiList.filter(p => p.statusKGB !== "Selesai");
 
@@ -169,6 +198,153 @@ export default function Dashboard({
           </div>
           <div className="p-3.5 bg-sky-50 text-sky-600 rounded-xl group-hover:bg-sky-500 group-hover:text-white transition-colors duration-200">
             <CalendarClock size={22} />
+          </div>
+        </div>
+      </div>
+
+      {/* Visual Analytics & Statistics Bento Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Status Breakdown Segmented Donut/Bar Chart (5/12) */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Ringkasan Status Progres SKGB</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Proporsi kesiapan berkas kenaikan gaji berkala pegawai di seluruh sekolah.</p>
+          </div>
+
+          <div className="space-y-4">
+            {/* Custom Interactive Segmented Bar */}
+            <div className="h-6 w-full rounded-xl bg-slate-100 overflow-hidden flex shadow-inner">
+              {kgbSelesai > 0 && (
+                <div 
+                  style={{ width: `${pctSelesai}%` }} 
+                  className="bg-indigo-600 transition-all duration-500 relative group cursor-pointer"
+                  title={`Selesai: ${kgbSelesai} Pegawai (${pctSelesai}%)`}
+                >
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+              )}
+              {kgbPerluProses > 0 && (
+                <div 
+                  style={{ width: `${pctPerluProses}%` }} 
+                  className="bg-amber-500 transition-all duration-500 relative group cursor-pointer"
+                  title={`Perlu Diproses: ${kgbPerluProses} Pegawai (${pctPerluProses}%)`}
+                >
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+              )}
+              {kgbMendekati > 0 && (
+                <div 
+                  style={{ width: `${pctMendekati}%` }} 
+                  className="bg-sky-500 transition-all duration-500 relative group cursor-pointer"
+                  title={`Mendekati Jatuh Tempo: ${kgbMendekati} Pegawai (${pctMendekati}%)`}
+                >
+                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </div>
+              )}
+            </div>
+
+            {/* Legend with Metrics Details */}
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
+              <div className="space-y-1.5 p-2 bg-indigo-50/50 rounded-xl border border-indigo-100/30">
+                <div className="flex items-center space-x-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0"></span>
+                  <span className="text-[10px] font-bold text-indigo-950 uppercase">Selesai</span>
+                </div>
+                <div className="text-sm font-extrabold text-indigo-900">{kgbSelesai} <span className="text-[10px] text-indigo-700/80 font-normal">({pctSelesai}%)</span></div>
+              </div>
+
+              <div className="space-y-1.5 p-2 bg-amber-50/50 rounded-xl border border-amber-100/30">
+                <div className="flex items-center space-x-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
+                  <span className="text-[10px] font-bold text-amber-950 uppercase">Proses</span>
+                </div>
+                <div className="text-sm font-extrabold text-amber-850">{kgbPerluProses} <span className="text-[10px] text-amber-700/80 font-normal">({pctPerluProses}%)</span></div>
+              </div>
+
+              <div className="space-y-1.5 p-2 bg-sky-50/50 rounded-xl border border-sky-100/30">
+                <div className="flex items-center space-x-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0"></span>
+                  <span className="text-[10px] font-bold text-sky-950 uppercase">Mendekati</span>
+                </div>
+                <div className="text-sm font-extrabold text-sky-900">{kgbMendekati} <span className="text-[10px] text-sky-700/80 font-normal">({pctMendekati}%)</span></div>
+              </div>
+            </div>
+
+            {/* Micro-insight copy */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 leading-relaxed flex items-center gap-2">
+              <div className="p-1 bg-white text-indigo-600 rounded-md border border-slate-200">
+                <TrendingUp size={12} className="stroke-[2.5]" />
+              </div>
+              <span>
+                {kgbPerluProses > 0 
+                  ? `Ada ${kgbPerluProses} berkas yang mendesak untuk segera diterbitkan surat keputusan barunya.`
+                  : "Semua kenaikan gaji berkala bulan ini berada dalam status lancar dan tuntas."
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Demographics / Top lists breakdown (7/12) */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Top Golongan */}
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Top Kepangkatan / Golongan</h3>
+              <p className="text-[10px] text-slate-500 mt-0.5">Sebaran kepangkatan ASN teratas dalam database.</p>
+            </div>
+            
+            <div className="space-y-2.5">
+              {sortedGolongan.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4">Belum ada data kepangkatan.</p>
+              ) : (
+                sortedGolongan.map((item, idx) => {
+                  const maxCount = Math.max(...sortedGolongan.map(g => g.count)) || 1;
+                  const pct = Math.round((item.count / maxCount) * 100);
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-slate-700 uppercase font-mono">{item.name}</span>
+                        <span className="text-slate-500">{item.count} Pegawai</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div style={{ width: `${pct}%` }} className="h-full bg-indigo-500 rounded-full"></div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Top Unit Kerja */}
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">Top Unit Kerja / Sekolah</h3>
+              <p className="text-[10px] text-slate-500 mt-0.5">Sekolah dengan jumlah pegawai terdaftar terbanyak.</p>
+            </div>
+            
+            <div className="space-y-2.5">
+              {sortedUnit.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4">Belum ada data unit kerja.</p>
+              ) : (
+                sortedUnit.map((item, idx) => {
+                  const maxCount = Math.max(...sortedUnit.map(u => u.count)) || 1;
+                  const pct = Math.round((item.count / maxCount) * 100);
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-slate-700 truncate max-w-[130px]">{item.name}</span>
+                        <span className="text-slate-500">{item.count} Pegawai</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div style={{ width: `${pct}%` }} className="h-full bg-teal-500 rounded-full"></div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>

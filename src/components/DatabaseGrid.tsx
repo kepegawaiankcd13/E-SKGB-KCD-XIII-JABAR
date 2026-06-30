@@ -125,6 +125,7 @@ export default function DatabaseGrid({
 
   const [gajiPokokBaru, setGajiPokokBaru] = useState(0);
   const [pangkatGolonganBaru, setPangkatGolonganBaru] = useState("");
+  const [jabatanBaru, setJabatanBaru] = useState("");
   const [noSuratBaru, setNoSuratBaru] = useState("");
   const [mkTahunBaru, setMkTahunBaru] = useState(0);
   const [mkBulanBaru, setMkBulanBaru] = useState(0);
@@ -331,6 +332,7 @@ export default function DatabaseGrid({
 
       setGajiPokokBaru(pegawai.gajiPokokBaru);
       setPangkatGolonganBaru(pegawai.pangkatGolonganBaru || pegawai.pangkatGolongan);
+      setJabatanBaru(pegawai.jabatanBaru || pegawai.jabatan);
       setNoSuratBaru(pegawai.noSuratBaru || "");
       setMkTahunBaru(pegawai.mkTahunBaru);
       setMkBulanBaru(pegawai.mkBulanBaru);
@@ -367,6 +369,7 @@ export default function DatabaseGrid({
 
       setGajiPokokBaru(4169900);
       setPangkatGolonganBaru("PENATA Tk. I, III/d");
+      setJabatanBaru("");
       setNoSuratBaru("");
       setMkTahunBaru(18);
       setMkBulanBaru(0);
@@ -389,6 +392,7 @@ export default function DatabaseGrid({
       "Tanggal Lahir (YYYY-MM-DD)",
       "Pangkat Golongan", // e.g. "IX" or "PENATA, III/c"
       "Jabatan",
+      "Jabatan Baru",
       "Unit Kerja (Sekolah)",
       "Gaji Pokok Lama",
       "Gaji Pokok Baru",
@@ -414,7 +418,8 @@ export default function DatabaseGrid({
       "CIAMIS",
       "1985-10-10",
       "PENATA, III/c",
-      "GURU AHLI PERTAMA - SEJARAH",
+      "GURU AHLI MUDA",
+      "GURU AHLI MADYA",
       "SMAN 1 CIHAURBEUTI",
       3502000,
       3610000,
@@ -495,23 +500,24 @@ export default function DatabaseGrid({
             tanggalLahir: cell(4) ? String(cell(4)).trim() : "1980-01-01",
             pangkatGolongan: String(cell(5)).trim(),
             jabatan: String(cell(6)).trim().toUpperCase(),
-            unitKerja: String(cell(7)).trim().toUpperCase(),
-            gajiPokokLama: Number(cell(8, 0)),
-            gajiPokokBaru: Number(cell(9, 0)),
-            mkTahunBaru: Number(cell(10, 0)),
-            mkBulanBaru: Number(cell(11, 0)),
-            noHp: cell(12) ? String(cell(12)).trim() : undefined,
-            email: cell(13) ? String(cell(13)).trim() : undefined,
-            skOlehPejabat: String(cell(14, "KEPALA CABANG DINAS PENDIDIKAN WILAYAH XIII")),
-            skNomor: String(cell(15, "800/KCD-XIII")),
-            skTanggal: cell(16) ? String(cell(16)).trim() : "2024-01-01",
-            skTglMulaiBerlaku: cell(17) ? String(cell(17)).trim() : "2024-01-01",
-            skMasaKerjaTahun: Number(cell(18, 0)),
-            skMasaKerjaBulan: Number(cell(19, 0)),
+            jabatanBaru: String(cell(7)).trim().toUpperCase(),
+            unitKerja: String(cell(8)).trim().toUpperCase(),
+            gajiPokokLama: Number(cell(9, 0)),
+            gajiPokokBaru: Number(cell(10, 0)),
+            mkTahunBaru: Number(cell(11, 0)),
+            mkBulanBaru: Number(cell(12, 0)),
+            noHp: cell(13) ? String(cell(13)).trim() : undefined,
+            email: cell(14) ? String(cell(14)).trim() : undefined,
+            skOlehPejabat: String(cell(15, "KEPALA CABANG DINAS PENDIDIKAN WILAYAH XIII")),
+            skNomor: String(cell(16, "800/KCD-XIII")),
+            skTanggal: cell(17) ? String(cell(17)).trim() : "2024-01-01",
+            skTglMulaiBerlaku: cell(18) ? String(cell(18)).trim() : "2024-01-01",
+            skMasaKerjaTahun: Number(cell(19, 0)),
+            skMasaKerjaBulan: Number(cell(20, 0)),
             hasPMK: false,
-            tmtBaru: cell(20) ? String(cell(20)).trim() : "2026-01-01",
-            tmtAkanDatang: cell(21) ? String(cell(21)).trim() : "2028-01-01",
-            statusKGB: (cell(22) ? String(cell(22)).trim() : "Selesai") as any
+            tmtBaru: cell(21) ? String(cell(21)).trim() : "2026-01-01",
+            tmtAkanDatang: cell(22) ? String(cell(22)).trim() : "2028-01-01",
+            statusKGB: (cell(23) ? String(cell(23)).trim() : "Selesai") as any
           };
 
           if (pegItem.nama && pegItem.nip) {
@@ -567,6 +573,10 @@ export default function DatabaseGrid({
       setGajiPokokBaru(lookedUpGajiBaru);
     } else if (lookedUpGajiLama > 0) {
       setGajiPokokBaru(Math.round(lookedUpGajiLama * 1.0314 / 100) * 100);
+    }
+
+    if (!jabatanBaru && jabatan) {
+      setJabatanBaru(jabatan);
     }
 
     if (skTglMulaiBerlaku) {
@@ -629,6 +639,7 @@ export default function DatabaseGrid({
       tanggalLahir,
       pangkatGolongan,
       pangkatGolonganBaru: pangkatGolonganBaru || pangkatGolongan,
+      jabatanBaru: jabatanBaru || jabatan,
       jabatan,
       unitKerja,
       gajiPokokLama: Number(gajiPokokLama),
@@ -1561,6 +1572,18 @@ export default function DatabaseGrid({
                             ))}
                           </select>
                         )}
+                      </div>
+
+                      <div className="space-y-1.5 col-span-1 md:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Jabatan Baru *</label>
+                        <input
+                          type="text"
+                          required
+                          value={jabatanBaru}
+                          onChange={(e) => setJabatanBaru(e.target.value.toUpperCase())}
+                          placeholder="e.g. GURU AHLI MADYA"
+                          className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 font-bold text-slate-800"
+                        />
                       </div>
 
                       <div className="space-y-1.5">

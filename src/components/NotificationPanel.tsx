@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from "react";
+import Swal from "sweetalert2";
 import { 
   Bell, 
   Send, 
@@ -79,6 +80,59 @@ _Cabdisdik XIII Jabar - Juara Lahir Batin_`;
     setTimeout(() => {
       setCopiedId(null);
     }, 2500);
+  };
+
+  const formatWhatsAppNumber = (phoneStr?: string) => {
+    if (!phoneStr) return "";
+    // Clean all non-digit characters
+    let cleaned = phoneStr.replace(/\D/g, "");
+    // If starts with '0', replace with '62'
+    if (cleaned.startsWith("0")) {
+      cleaned = "62" + cleaned.slice(1);
+    }
+    // If starts with '8', add '62'
+    else if (cleaned.startsWith("8")) {
+      cleaned = "62" + cleaned;
+    }
+    return cleaned;
+  };
+
+  const handleSendWhatsApp = (peg: Pegawai) => {
+    const formattedNum = formatWhatsAppNumber(peg.noHp);
+    const messageText = generateMessage(peg);
+    
+    if (formattedNum) {
+      const url = `https://api.whatsapp.com/send?phone=${formattedNum}&text=${encodeURIComponent(messageText)}`;
+      window.open(url, "_blank");
+    } else {
+      Swal.fire({
+        title: "Nomor HP Tidak Ditemukan",
+        text: `Pegawai ${peg.nama} belum memiliki nomor HP di database. Silakan masukkan nomor HP secara manual untuk mengirim via WhatsApp:`,
+        input: "text",
+        inputPlaceholder: "Contoh: 08123456789",
+        showCancelButton: true,
+        confirmButtonText: "Kirim via WhatsApp",
+        cancelButtonText: "Batal",
+        confirmButtonColor: "#10b981", // Emerald-500
+        cancelButtonColor: "#64748b",
+        inputValidator: (value) => {
+          if (!value) {
+            return "Nomor HP wajib diisi!";
+          }
+          if (!/^[0-9]+$/.test(value.replace(/[-+ ()]/g, ""))) {
+            return "Masukkan nomor HP yang valid!";
+          }
+          return null;
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const rawPhone = result.value;
+          const cleanPhone = formatWhatsAppNumber(rawPhone);
+          const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`;
+          window.open(url, "_blank");
+        }
+      });
+    }
   };
 
   const isNearing = (status: string) => status === "Mendekati Jatuh Tempo";
@@ -166,6 +220,17 @@ _Cabdisdik XIII Jabar - Juara Lahir Batin_`;
                     >
                       {copiedId === peg.id ? <Check size={14} className="text-indigo-600 font-bold" /> : <Copy size={14} />}
                     </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendWhatsApp(peg);
+                      }}
+                      className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-950 rounded-lg transition-colors cursor-pointer"
+                      title="Kirim via WhatsApp"
+                    >
+                      <Send size={14} className="rotate-[45deg]" />
+                    </button>
                   </div>
                 </div>
               ))
@@ -195,7 +260,7 @@ _Cabdisdik XIII Jabar - Juara Lahir Batin_`;
               <button
                 type="button"
                 onClick={() => handleCopy(selectedPeg)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs tracking-wider uppercase transition-all flex items-center gap-2 cursor-pointer shadow"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold rounded-lg text-xs tracking-wider uppercase transition-all flex items-center gap-2 cursor-pointer"
               >
                 {copiedId === selectedPeg.id ? (
                   <>
@@ -205,9 +270,17 @@ _Cabdisdik XIII Jabar - Juara Lahir Batin_`;
                 ) : (
                   <>
                     <Copy size={14} />
-                    <span>Salin Draf Pesan</span>
+                    <span>Salin Draf</span>
                   </>
                 )}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendWhatsApp(selectedPeg)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs tracking-wider uppercase transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-950/20"
+              >
+                <Send size={14} />
+                <span>Kirim WhatsApp</span>
               </button>
             </div>
           )}

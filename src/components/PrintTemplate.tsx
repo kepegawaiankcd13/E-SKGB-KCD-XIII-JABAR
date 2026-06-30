@@ -315,6 +315,13 @@ export default function PrintTemplate({
           </div>
 
           <div className="flex items-start">
+            <span className="w-6 shrink-0 inline-block"></span>
+            <span className="w-72 shrink-0 inline-block uppercase text-black font-semibold text-xs pl-6">DALAM JABATAN BARU</span>
+            <span className="mx-2 font-semibold text-black shrink-0">:</span>
+            <span className="font-bold text-black uppercase flex-1">{pegawai.jabatanBaru || pegawai.jabatan}</span>
+          </div>
+
+          <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">10.</span>
             <span className="w-72 shrink-0 inline-block uppercase font-bold text-black">TERHITUNG MULAI TANGGAL</span>
             <span className="mx-2 font-semibold text-black shrink-0">:</span>

@@ -372,6 +372,16 @@ export default function SKGBForm({
                 </div>
 
                 <div className="space-y-1">
+                  <label className="font-bold text-slate-600 block">Jabatan Baru</label>
+                  <input
+                    type="text"
+                    value={manualPeg.jabatanBaru || manualPeg.jabatan}
+                    onChange={(e) => handleManualFieldChange("jabatanBaru", e.target.value)}
+                    className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded focus:outline-none focus:border-indigo-500 text-slate-800"
+                  />
+                </div>
+
+                <div className="space-y-1">
                   <label className="font-bold text-slate-600 block">Unit Kerja</label>
                   <input
                     type="text"

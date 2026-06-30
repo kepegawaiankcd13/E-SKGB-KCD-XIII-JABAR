@@ -173,16 +173,30 @@ export default function LaporanSKGB({ pegawaiList, settings }: LaporanSKGBProps)
       "No.": idx + 1,
       "Nama Pegawai": p.nama,
       "NIP": `'${p.nip}`, // prefix single quote for phone/NIP styling in Excel
-      "Pangkat / Golongan": p.pangkatGolongan,
-      "Jabatan": p.jabatan,
+      "Tempat Lahir": p.tempatLahir || "-",
+      "Tanggal Lahir": p.tanggalLahir || "-",
+      "No HP": p.noHp || "-",
+      "Email": p.email || "-",
+      "Pangkat / Golongan Lama": p.pangkatGolongan,
+      "Pangkat / Golongan Baru": p.pangkatGolonganBaru || p.pangkatGolongan,
+      "Jabatan Lama": p.jabatan,
+      "Jabatan Baru": p.jabatanBaru || p.jabatan,
       "Unit Kerja (Sekolah)": p.unitKerja,
       "Gaji Pokok Lama": p.gajiPokokLama,
       "Gaji Pokok Baru": p.gajiPokokBaru,
       "Kenaikan Gaji": p.gajiPokokBaru - p.gajiPokokLama,
-      "TMT KGB": p.tmtBaru,
-      "TMT Berikutnya": p.tmtAkanDatang,
-      "Nomor Surat SKGB": p.skNomor || "-",
-      "Tanggal Penerbitan": p.skTanggal || "-"
+      "SK Lama Oleh Pejabat": p.skOlehPejabat || "-",
+      "SK Lama Nomor": p.skNomor || "-",
+      "SK Lama Tanggal": p.skTanggal || "-",
+      "SK Lama TMT Berlaku": p.skTglMulaiBerlaku || "-",
+      "SK Lama Masa Kerja Tahun": p.skMasaKerjaTahun,
+      "SK Lama Masa Kerja Bulan": p.skMasaKerjaBulan,
+      "Masa Kerja Golongan Tahun (Baru)": p.mkTahunBaru,
+      "Masa Kerja Golongan Bulan (Baru)": p.mkBulanBaru,
+      "Nomor Surat KGB Baru": p.noSuratBaru || "-",
+      "TMT KGB Baru": p.tmtBaru,
+      "TMT Berikutnya (YAD)": p.tmtAkanDatang,
+      "Status KGB": p.statusKGB
     }));
 
     // Create workbook and worksheet
@@ -191,21 +205,18 @@ export default function LaporanSKGB({ pegawaiList, settings }: LaporanSKGBProps)
     XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan SKGB");
 
     // Adjust column widths automatically
-    const wscols = [
-      { wch: 5 },   // No
-      { wch: 32 },  // Nama
-      { wch: 22 },  // NIP
-      { wch: 18 },  // Pangkat
-      { wch: 30 },  // Jabatan
-      { wch: 35 },  // Unit Kerja
-      { wch: 18 },  // Gaji Pokok Lama
-      { wch: 18 },  // Gaji Pokok Baru
-      { wch: 15 },  // Kenaikan Gaji
-      { wch: 15 },  // TMT KGB
-      { wch: 15 },  // TMT Berikutnya
-      { wch: 28 },  // Nomor SKGB
-      { wch: 18 }   // Tanggal SKGB
-    ];
+    const keys = Object.keys(rows[0]);
+    const wscols = keys.map(key => {
+      let maxLen = key.length;
+      rows.forEach(row => {
+        const val = (row as any)[key];
+        const str = val !== null && val !== undefined ? String(val) : "";
+        if (str.length > maxLen) {
+          maxLen = str.length;
+        }
+      });
+      return { wch: Math.min(Math.max(maxLen + 3, 10), 50) };
+    });
     worksheet["!cols"] = wscols;
 
     // Trigger save
