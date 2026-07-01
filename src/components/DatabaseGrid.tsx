@@ -64,6 +64,7 @@ const isDataLengkap = (peg: Pegawai): { valid: boolean; missingFields: string[] 
 interface DatabaseGridProps {
   pegawaiList: Pegawai[];
   onAddPegawai: (pegawai: Pegawai) => void;
+  onImportPegawaiBatch?: (pegawaiList: Pegawai[]) => Promise<void>;
   onUpdatePegawai: (id: string, updated: Pegawai) => void;
   onDeletePegawai: (id: string) => void;
   onSelectPegawaiForSKGB: (pegawai: Pegawai) => void;
@@ -74,6 +75,7 @@ interface DatabaseGridProps {
 export default function DatabaseGrid({ 
   pegawaiList, 
   onAddPegawai, 
+  onImportPegawaiBatch,
   onUpdatePegawai, 
   onDeletePegawai, 
   onSelectPegawaiForSKGB,
@@ -526,6 +528,11 @@ export default function DatabaseGrid({
             statusKGB: (cell(23) ? String(cell(23)).trim() : "Selesai") as any
           };
 
+          // Skip example template row (Budi Santoso) to prevent placeholder leakage
+          if (pegItem.nama === "BUDI SANTOSO, S.PD." || pegItem.nip === "198510102015031002") {
+            return;
+          }
+
           if (pegItem.nama && pegItem.nip) {
             parsedPegList.push(pegItem);
           }
@@ -547,9 +554,13 @@ export default function DatabaseGrid({
   const handleConfirmImport = () => {
     if (importPreviewData.length === 0) return;
     
-    importPreviewData.forEach(peg => {
-      onAddPegawai(peg);
-    });
+    if (onImportPegawaiBatch) {
+      onImportPegawaiBatch(importPreviewData);
+    } else {
+      importPreviewData.forEach(peg => {
+        onAddPegawai(peg);
+      });
+    }
 
     setImportPreviewData([]);
     setIsImportModalOpen(false);

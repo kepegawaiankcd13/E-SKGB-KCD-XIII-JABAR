@@ -83,6 +83,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // FIRESTORE SYNC HELPERS (with local fallbacks and proper error intercepts)
 // -------------------------------------------------------------
 
+// Helper to remove any undefined properties recursively to prevent Firestore write crashes
+function cleanUndefined<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    return obj.map(v => cleanUndefined(v)) as unknown as T;
+  } else if (obj !== null && typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj)
+        .filter(([_, v]) => v !== undefined)
+        .map(([k, v]) => [k, cleanUndefined(v)])
+    ) as unknown as T;
+  }
+  return obj;
+}
+
 // 1. Pegawai (Employees) Data Sync
 export async function getPegawaiFromFirestore(): Promise<Pegawai[] | null> {
   const path = "pegawai";
@@ -105,7 +119,8 @@ export async function savePegawaiToFirestore(pegawai: Pegawai): Promise<boolean>
   const path = `pegawai/${pegawai.id}`;
   try {
     const docRef = doc(db, "pegawai", pegawai.id);
-    await setDoc(docRef, pegawai);
+    const sanitized = cleanUndefined(pegawai);
+    await setDoc(docRef, sanitized);
     return true;
   } catch (error) {
     console.error("Error saving pegawai to Firestore:", error);

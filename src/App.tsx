@@ -420,6 +420,42 @@ export default function App() {
     }
   };
 
+  const handleImportPegawaiBatch = async (newPegs: Pegawai[]) => {
+    Swal.fire({
+      title: "Mengimpor Data Pegawai...",
+      html: "Sedang mengunggah dan mensinkronisasikan data ke database cloud Firebase. Mohon tunggu...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      for (const peg of newPegs) {
+        await savePegawaiToFirestore(peg);
+      }
+      
+      setPegawaiList((prev) => [...newPegs, ...prev]);
+      handleLogActivity("Import Pegawai", `Berhasil mengimpor ${newPegs.length} data pegawai baru secara massal dari file Excel.`);
+      
+      Swal.fire({
+        title: "Import Berhasil!",
+        html: `Berhasil menyimpan dan mensinkronisasikan <strong>${newPegs.length} pegawai</strong> secara permanen ke database cloud Firebase.`,
+        icon: "success",
+        confirmButtonColor: "#4f46e5",
+        confirmButtonText: "Selesai"
+      });
+    } catch (err) {
+      console.error("Batch import error:", err);
+      Swal.fire({
+        title: "Kesalahan Import",
+        text: "Gagal menyimpan seluruh data ke server cloud. Silakan coba lagi.",
+        icon: "error",
+        confirmButtonColor: "#e11d48"
+      });
+    }
+  };
+
   const handleUpdatePegawai = async (id: string, updated: Pegawai) => {
     try {
       setPegawaiList((prev) => prev.map((p) => (p.id === id ? updated : p)));
@@ -569,6 +605,7 @@ export default function App() {
             <DatabaseGrid 
               pegawaiList={pegawaiList}
               onAddPegawai={handleAddPegawai}
+              onImportPegawaiBatch={handleImportPegawaiBatch}
               onUpdatePegawai={handleUpdatePegawai}
               onDeletePegawai={handleDeletePegawai}
               onSelectPegawaiForSKGB={handleSelectPegawaiForSKGB}
