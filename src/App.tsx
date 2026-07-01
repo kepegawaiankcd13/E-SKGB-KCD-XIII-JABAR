@@ -31,6 +31,7 @@ import {
   getPegawaiFromFirestore,
   savePegawaiToFirestore,
   deletePegawaiFromFirestore,
+  clearAllPegawaiFromFirestore,
   getSettingsFromFirestore,
   saveSettingsToFirestore,
   getLogsFromFirestore,
@@ -519,6 +520,50 @@ export default function App() {
     });
   };
 
+  const handleClearAllPegawai = () => {
+    Swal.fire({
+      title: "Konfirmasi Hapus Semua Data",
+      html: `Apakah Anda benar-benar yakin ingin menghapus <strong class="text-rose-600">SEMUA data pegawai</strong> di dalam tabel? <br><br>Semua rekam data pegawai akan dihapus permanen dari cloud Firestore dan tidak dapat dikembalikan.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus Semua!",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#e11d48",
+      cancelButtonColor: "#475569",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: "Menghapus Semua Data...",
+          html: "Sedang mengosongkan database cloud. Mohon tunggu...",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+        try {
+          await clearAllPegawaiFromFirestore();
+          setPegawaiList([]);
+          handleLogActivity("Kosongkan Database", "Menghapus semua data pegawai dari sistem secara permanen.");
+          
+          Swal.fire({
+            title: "Berhasil Dikosongkan!",
+            text: "Seluruh data pegawai telah sukses dihapus dari database cloud.",
+            icon: "success",
+            confirmButtonColor: "#4f46e5",
+          });
+        } catch (err) {
+          console.error(err);
+          Swal.fire({
+            title: "Kesalahan",
+            text: "Gagal mengosongkan database di cloud.",
+            icon: "error",
+            confirmButtonColor: "#e11d48",
+          });
+        }
+      }
+    });
+  };
+
   const handleUpdateSettings = async (newSettings: SystemSettings) => {
     try {
       setSettings(newSettings);
@@ -608,6 +653,7 @@ export default function App() {
               onImportPegawaiBatch={handleImportPegawaiBatch}
               onUpdatePegawai={handleUpdatePegawai}
               onDeletePegawai={handleDeletePegawai}
+              onClearAllPegawai={handleClearAllPegawai}
               onSelectPegawaiForSKGB={handleSelectPegawaiForSKGB}
               settings={settings}
               onLogActivity={handleLogActivity}

@@ -67,6 +67,7 @@ interface DatabaseGridProps {
   onImportPegawaiBatch?: (pegawaiList: Pegawai[]) => Promise<void>;
   onUpdatePegawai: (id: string, updated: Pegawai) => void;
   onDeletePegawai: (id: string) => void;
+  onClearAllPegawai?: () => void;
   onSelectPegawaiForSKGB: (pegawai: Pegawai) => void;
   settings: SystemSettings;
   onLogActivity: (action: string, detail: string) => void;
@@ -78,6 +79,7 @@ export default function DatabaseGrid({
   onImportPegawaiBatch,
   onUpdatePegawai, 
   onDeletePegawai, 
+  onClearAllPegawai,
   onSelectPegawaiForSKGB,
   settings,
   onLogActivity
@@ -129,6 +131,7 @@ export default function DatabaseGrid({
   const [pangkatGolonganBaru, setPangkatGolonganBaru] = useState("");
   const [jabatanBaru, setJabatanBaru] = useState("");
   const [noSuratBaru, setNoSuratBaru] = useState("");
+  const [tglSuratBaru, setTglSuratBaru] = useState("");
   const [mkTahunBaru, setMkTahunBaru] = useState(0);
   const [mkBulanBaru, setMkBulanBaru] = useState(0);
   const [tmtBaru, setTmtBaru] = useState("");
@@ -342,6 +345,7 @@ export default function DatabaseGrid({
       setPangkatGolonganBaru(pegawai.pangkatGolonganBaru || pegawai.pangkatGolongan);
       setJabatanBaru(pegawai.jabatanBaru || pegawai.jabatan);
       setNoSuratBaru(pegawai.noSuratBaru || "");
+      setTglSuratBaru(pegawai.tglSuratBaru || "");
       setMkTahunBaru(pegawai.mkTahunBaru);
       setMkBulanBaru(pegawai.mkBulanBaru);
       setTmtBaru(pegawai.tmtBaru);
@@ -379,6 +383,7 @@ export default function DatabaseGrid({
       setPangkatGolonganBaru("PENATA Tk. I, III/d");
       setJabatanBaru("");
       setNoSuratBaru("");
+      setTglSuratBaru("");
       setMkTahunBaru(18);
       setMkBulanBaru(0);
       setTmtBaru("");
@@ -416,7 +421,9 @@ export default function DatabaseGrid({
       "SK Lama Masa Kerja Bulan",
       "TMT KGB Baru (YYYY-MM-DD)",
       "TMT KGB YAD (YYYY-MM-DD)",
-      "Status KGB (Selesai / Perlu Diproses / Mendekati Jatuh Tempo)"
+      "Status KGB (Selesai / Perlu Diproses / Mendekati Jatuh Tempo)",
+      "Nomor Surat KGB Baru (Optional)",
+      "Tanggal Surat KGB Baru (YYYY-MM-DD) (Optional)"
     ];
 
     const sampleRow = [
@@ -443,7 +450,9 @@ export default function DatabaseGrid({
       2,
       "2026-04-01",
       "2028-04-01",
-      "Selesai"
+      "Selesai",
+      "800/KCD-XIII/001/2026",
+      "2026-03-25"
     ];
 
     if (format === "xlsx") {
@@ -489,43 +498,84 @@ export default function DatabaseGrid({
           throw new Error("File tidak memiliki baris data (kosong atau hanya header)");
         }
 
+        const headers = (rawRows[0] || []).map((h: any) => String(h || "").trim().toLowerCase());
+
+        const findHeaderIdx = (keywords: string[], defaultIdx: number): number => {
+          const found = headers.findIndex((h: string) => 
+            keywords.some(kw => h.includes(kw.toLowerCase()))
+          );
+          return found !== -1 ? found : defaultIdx;
+        };
+
+        const idxNama = findHeaderIdx(["nama pegawai", "nama lengkap", "nama"], 1);
+        const idxNip = findHeaderIdx(["nip"], 2);
+        const idxTempatLahir = findHeaderIdx(["tempat lahir"], 3);
+        const idxTanggalLahir = findHeaderIdx(["tanggal lahir"], 4);
+        const idxPangkatGolongan = findHeaderIdx(["pangkat golongan", "pangkat/golongan", "pangkat", "golongan"], 5);
+        const idxJabatan = findHeaderIdx(["jabatan lama", "jabatan"], 6);
+        const idxJabatanBaru = findHeaderIdx(["jabatan baru"], 7);
+        const idxUnitKerja = findHeaderIdx(["unit kerja", "sekolah"], 8);
+        const idxGajiPokokLama = findHeaderIdx(["gaji pokok lama", "gaji lama"], 9);
+        const idxGajiPokokBaru = findHeaderIdx(["gaji pokok baru", "gaji baru"], 10);
+        const idxMkTahunBaru = findHeaderIdx(["masa kerja golongan tahun (baru)", "masa kerja tahun baru", "mk tahun baru", "mk golongan tahun"], 11);
+        const idxMkBulanBaru = findHeaderIdx(["masa kerja golongan bulan (baru)", "masa kerja bulan baru", "mk bulan baru", "mk golongan bulan"], 12);
+        const idxNoHp = findHeaderIdx(["no hp", "nomor hp", "whatsapp", "no. hp", "telepon"], 13);
+        const idxEmail = findHeaderIdx(["email"], 14);
+        const idxSkOlehPejabat = findHeaderIdx(["sk lama oleh pejabat", "oleh pejabat", "pejabat penerbit"], 15);
+        const idxSkNomor = findHeaderIdx(["sk lama nomor", "nomor sk lama", "no sk lama", "sk nomor"], 16);
+        const idxSkTanggal = findHeaderIdx(["sk lama tanggal", "tanggal sk lama", "sk tanggal"], 17);
+        const idxSkTglMulaiBerlaku = findHeaderIdx(["sk lama tmt berlaku", "tmt berlaku sk lama", "sk tmt"], 18);
+        const idxSkMasaKerjaTahun = findHeaderIdx(["sk lama masa kerja tahun", "masa kerja tahun sk lama"], 19);
+        const idxSkMasaKerjaBulan = findHeaderIdx(["sk lama masa kerja bulan", "masa kerja bulan sk lama"], 20);
+        const idxTmtBaru = findHeaderIdx(["tmt kgb baru", "tmt baru"], 21);
+        const idxTmtAkanDatang = findHeaderIdx(["tmt kgb yad", "tmt yad", "tmt berikutnya"], 22);
+        const idxStatusKGB = findHeaderIdx(["status kgb", "status"], 23);
+        const idxNoSuratBaru = findHeaderIdx(["nomor surat kgb baru", "nomor surat baru", "no surat baru", "nomor surat (agenda)", "nomor surat agenda"], 24);
+        const idxTglSuratBaru = findHeaderIdx(["tanggal surat kgb baru", "tanggal surat baru", "tgl surat baru", "tanggal surat kgb", "tgl surat kgb", "tanggal surat"], 25);
+
         const dataRows = rawRows.slice(1); // skip headers
         const parsedPegList: Pegawai[] = [];
 
         dataRows.forEach((row, idx) => {
-          if (!row || row.length === 0 || !row[1]) return;
+          if (!row || row.length === 0) return;
 
           const cell = (colIdx: number, fallback: any = "") => {
             const val = row[colIdx];
             return val !== undefined && val !== null ? val : fallback;
           };
 
+          const namaVal = String(cell(idxNama)).trim();
+          const nipVal = String(cell(idxNip)).trim().replace(/[^0-9]/g, "");
+          if (!namaVal || !nipVal) return;
+
           const pegItem: Pegawai = {
             id: `peg-import-${Date.now()}-${idx}`,
-            nama: String(cell(1)).trim().toUpperCase(),
-            nip: String(cell(2)).trim().replace(/[^0-9]/g, ""),
-            tempatLahir: String(cell(3)).trim().toUpperCase(),
-            tanggalLahir: cell(4) ? String(cell(4)).trim() : "1980-01-01",
-            pangkatGolongan: String(cell(5)).trim(),
-            jabatan: String(cell(6)).trim().toUpperCase(),
-            jabatanBaru: String(cell(7)).trim().toUpperCase(),
-            unitKerja: String(cell(8)).trim().toUpperCase(),
-            gajiPokokLama: Number(cell(9, 0)),
-            gajiPokokBaru: Number(cell(10, 0)),
-            mkTahunBaru: Number(cell(11, 0)),
-            mkBulanBaru: Number(cell(12, 0)),
-            noHp: cell(13) ? String(cell(13)).trim() : undefined,
-            email: cell(14) ? String(cell(14)).trim() : undefined,
-            skOlehPejabat: String(cell(15, "KEPALA CABANG DINAS PENDIDIKAN WILAYAH XIII")),
-            skNomor: String(cell(16, "800/KCD-XIII")),
-            skTanggal: cell(17) ? String(cell(17)).trim() : "2024-01-01",
-            skTglMulaiBerlaku: cell(18) ? String(cell(18)).trim() : "2024-01-01",
-            skMasaKerjaTahun: Number(cell(19, 0)),
-            skMasaKerjaBulan: Number(cell(20, 0)),
+            nama: namaVal.toUpperCase(),
+            nip: nipVal,
+            tempatLahir: String(cell(idxTempatLahir)).trim().toUpperCase(),
+            tanggalLahir: cell(idxTanggalLahir) ? String(cell(idxTanggalLahir)).trim() : "1980-01-01",
+            pangkatGolongan: String(cell(idxPangkatGolongan)).trim(),
+            jabatan: String(cell(idxJabatan)).trim().toUpperCase(),
+            jabatanBaru: String(cell(idxJabatanBaru)).trim().toUpperCase(),
+            unitKerja: String(cell(idxUnitKerja)).trim().toUpperCase(),
+            gajiPokokLama: Number(cell(idxGajiPokokLama, 0)),
+            gajiPokokBaru: Number(cell(idxGajiPokokBaru, 0)),
+            mkTahunBaru: Number(cell(idxMkTahunBaru, 0)),
+            mkBulanBaru: Number(cell(idxMkBulanBaru, 0)),
+            noHp: cell(idxNoHp) ? String(cell(idxNoHp)).trim() : undefined,
+            email: cell(idxEmail) ? String(cell(idxEmail)).trim() : undefined,
+            skOlehPejabat: String(cell(idxSkOlehPejabat, "KEPALA CABANG DINAS PENDIDIKAN WILAYAH XIII")),
+            skNomor: String(cell(idxSkNomor, "800/KCD-XIII")),
+            skTanggal: cell(idxSkTanggal) ? String(cell(idxSkTanggal)).trim() : "2024-01-01",
+            skTglMulaiBerlaku: cell(idxSkTglMulaiBerlaku) ? String(cell(idxSkTglMulaiBerlaku)).trim() : "2024-01-01",
+            skMasaKerjaTahun: Number(cell(idxSkMasaKerjaTahun, 0)),
+            skMasaKerjaBulan: Number(cell(idxSkMasaKerjaBulan, 0)),
             hasPMK: false,
-            tmtBaru: cell(21) ? String(cell(21)).trim() : "2026-01-01",
-            tmtAkanDatang: cell(22) ? String(cell(22)).trim() : "2028-01-01",
-            statusKGB: (cell(23) ? String(cell(23)).trim() : "Selesai") as any
+            tmtBaru: cell(idxTmtBaru) ? String(cell(idxTmtBaru)).trim() : "2026-01-01",
+            tmtAkanDatang: cell(idxTmtAkanDatang) ? String(cell(idxTmtAkanDatang)).trim() : "2028-01-01",
+            statusKGB: (cell(idxStatusKGB) ? String(cell(idxStatusKGB)).trim() : "Selesai") as any,
+            noSuratBaru: cell(idxNoSuratBaru) ? String(cell(idxNoSuratBaru)).trim() : undefined,
+            tglSuratBaru: cell(idxTglSuratBaru) ? String(cell(idxTglSuratBaru)).trim() : undefined
           };
 
           // Skip example template row (Budi Santoso) to prevent placeholder leakage
@@ -683,6 +733,7 @@ export default function DatabaseGrid({
       tmtBaru,
       tmtAkanDatang,
       noSuratBaru: noSuratBaru || undefined,
+      tglSuratBaru: tglSuratBaru || undefined,
       statusKGB: computedStatus,
       kgbFileUrl: editingPegawai?.kgbFileUrl || undefined,
       kgbFileName: editingPegawai?.kgbFileName || undefined,
@@ -770,6 +821,16 @@ export default function DatabaseGrid({
               <UserPlus size={16} />
               <span>Tambah Pegawai Baru</span>
             </button>
+
+            {onClearAllPegawai && (
+              <button
+                onClick={onClearAllPegawai}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-sm transition-all shadow-sm inline-flex items-center space-x-2 cursor-pointer"
+              >
+                <Trash2 size={16} />
+                <span>Hapus Isi Tabel</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1559,14 +1620,24 @@ export default function DatabaseGrid({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5 col-span-1 md:col-span-2">
-                        <label className="text-xs font-bold text-slate-700 uppercase">Nomor Surat Baru (KGB Baru) <span className="text-slate-400 font-normal lowercase">(Tidak wajib)</span></label>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Nomor Surat Baru <span className="text-slate-400 font-normal lowercase">(Optional)</span></label>
                         <input
                           type="text"
                           value={noSuratBaru}
                           onChange={(e) => setNoSuratBaru(e.target.value)}
-                          placeholder="e.g. 800/KCD.14/KCD XIII atau dikosongkan"
+                          placeholder="e.g. 800/KCD-XIII/001/2026"
                           className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 text-slate-800"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 uppercase">Tanggal Surat Baru <span className="text-slate-400 font-normal lowercase">(Optional)</span></label>
+                        <input
+                          type="date"
+                          value={tglSuratBaru}
+                          onChange={(e) => setTglSuratBaru(e.target.value)}
+                          className="w-full px-3.5 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-500 text-slate-800 font-bold"
                         />
                       </div>
 
@@ -1897,12 +1968,15 @@ export default function DatabaseGrid({
         // Compute individual nomor surat
         const nomorSurat = peg.noSuratBaru || settings.nomorSuratCounter;
 
-        // Compute today's date for print (format: YYYY-MM-DD)
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = String(today.getMonth() + 1).padStart(2, '0');
-        const d = String(today.getDate()).padStart(2, '0');
-        const tanggalSurat = `${y}-${m}-${d}`;
+        // Compute date for print (format: YYYY-MM-DD)
+        let tanggalSurat = peg.tglSuratBaru;
+        if (!tanggalSurat) {
+          const today = new Date();
+          const y = today.getFullYear();
+          const m = String(today.getMonth() + 1).padStart(2, '0');
+          const d = String(today.getDate()).padStart(2, '0');
+          tanggalSurat = `${y}-${m}-${d}`;
+        }
 
         // Tembusan
         const isPNS = !["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII"].includes(peg.pangkatGolongan);

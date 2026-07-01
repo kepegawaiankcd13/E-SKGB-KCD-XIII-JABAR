@@ -140,6 +140,20 @@ export async function deletePegawaiFromFirestore(id: string): Promise<boolean> {
   }
 }
 
+export async function clearAllPegawaiFromFirestore(): Promise<boolean> {
+  const path = "pegawai";
+  try {
+    const colRef = collection(db, "pegawai");
+    const snapshot = await getDocs(colRef);
+    const deletePromises = snapshot.docs.map(docSnap => deleteDoc(docSnap.ref));
+    await Promise.all(deletePromises);
+    return true;
+  } catch (error) {
+    console.error("Error clearing all pegawai from Firestore:", error);
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 // 2. Settings Sync
 export async function getSettingsFromFirestore(): Promise<SystemSettings | null> {
   const path = "settings";

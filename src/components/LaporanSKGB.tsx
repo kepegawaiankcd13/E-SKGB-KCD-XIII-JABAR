@@ -194,6 +194,7 @@ export default function LaporanSKGB({ pegawaiList, settings }: LaporanSKGBProps)
       "Masa Kerja Golongan Tahun (Baru)": p.mkTahunBaru,
       "Masa Kerja Golongan Bulan (Baru)": p.mkBulanBaru,
       "Nomor Surat KGB Baru": p.noSuratBaru || "-",
+      "Tanggal Surat KGB Baru": p.tglSuratBaru || "-",
       "TMT KGB Baru": p.tmtBaru,
       "TMT Berikutnya (YAD)": p.tmtAkanDatang,
       "Status KGB": p.statusKGB

@@ -86,10 +86,16 @@ export default function SKGBForm({
       setActivePegId(selectedPegawai.id);
       loadTembusanForPeg(selectedPegawai);
       setNomorSurat(selectedPegawai.noSuratBaru || settings.nomorSuratCounter);
+      if (selectedPegawai.tglSuratBaru) {
+        setTanggalSurat(selectedPegawai.tglSuratBaru);
+      }
     } else if (pegawaiList.length > 0 && !isManualInput) {
       setActivePegId(pegawaiList[0].id);
       loadTembusanForPeg(pegawaiList[0]);
       setNomorSurat(pegawaiList[0].noSuratBaru || settings.nomorSuratCounter);
+      if (pegawaiList[0].tglSuratBaru) {
+        setTanggalSurat(pegawaiList[0].tglSuratBaru);
+      }
     }
   }, [selectedPegawai, pegawaiList, settings]);
 
@@ -138,6 +144,9 @@ export default function SKGBForm({
       setActivePegId("manual");
       loadTembusanForPeg(manualPeg);
       setNomorSurat(manualPeg.noSuratBaru || settings.nomorSuratCounter);
+      if (manualPeg.tglSuratBaru) {
+        setTanggalSurat(manualPeg.tglSuratBaru);
+      }
     } else {
       setIsManualInput(false);
       setActivePegId(pId);
@@ -145,6 +154,9 @@ export default function SKGBForm({
       if (peg) {
         loadTembusanForPeg(peg);
         setNomorSurat(peg.noSuratBaru || settings.nomorSuratCounter);
+        if (peg.tglSuratBaru) {
+          setTanggalSurat(peg.tglSuratBaru);
+        }
       }
     }
   };
@@ -517,6 +529,25 @@ export default function SKGBForm({
                 {manualPeg.hasPMK && (
                   <>
                     <div className="space-y-1">
+                      <label className="font-bold text-slate-600 block">Nomor SK PMK</label>
+                      <input
+                        type="text"
+                        value={manualPeg.pmkNomor || ""}
+                        onChange={(e) => handleManualFieldChange("pmkNomor", e.target.value)}
+                        placeholder="e.g. SK-PMK-002"
+                        className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-600 block">Tanggal SK PMK</label>
+                      <input
+                        type="date"
+                        value={manualPeg.pmkTanggal || ""}
+                        onChange={(e) => handleManualFieldChange("pmkTanggal", e.target.value)}
+                        className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded"
+                      />
+                    </div>
+                    <div className="space-y-1">
                       <label className="font-bold text-slate-600 block">PMK Tambah Tahun</label>
                       <input
                         type="number"
@@ -536,6 +567,50 @@ export default function SKGBForm({
                     </div>
                   </>
                 )}
+
+                <div className="col-span-2 border-t border-slate-200/60 pt-2.5 font-bold text-slate-700 text-[11px] uppercase">
+                  C. Rincian KGB Baru (Hasil Kalkulasi)
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 block">TMT KGB Baru</label>
+                  <input
+                    type="date"
+                    value={manualPeg.tmtBaru}
+                    onChange={(e) => handleManualFieldChange("tmtBaru", e.target.value)}
+                    className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded font-sans font-semibold text-emerald-800"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-600 block">Masa Kerja Baru (Th/Bl)</label>
+                  <div className="grid grid-cols-2 gap-1">
+                    <input
+                      type="number"
+                      placeholder="Th"
+                      value={manualPeg.mkTahunBaru}
+                      onChange={(e) => handleManualFieldChange("mkTahunBaru", Number(e.target.value))}
+                      className="w-full px-2 py-1.5 border border-slate-200 bg-white rounded font-semibold text-slate-805"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Bl"
+                      value={manualPeg.mkBulanBaru}
+                      onChange={(e) => handleManualFieldChange("mkBulanBaru", Number(e.target.value))}
+                      className="w-full px-2 py-1.5 border border-slate-200 bg-white rounded font-semibold text-slate-805"
+                    />
+                  </div>
+                </div>
+
+                <div className="col-span-2 space-y-1">
+                  <label className="font-bold text-slate-600 block">Kenaikan Gaji Berkala Berikutnya (YAD)</label>
+                  <input
+                    type="date"
+                    value={manualPeg.tmtAkanDatang}
+                    onChange={(e) => handleManualFieldChange("tmtAkanDatang", e.target.value)}
+                    className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded font-sans font-semibold text-slate-805"
+                  />
+                </div>
               </div>
             </div>
           ) : (

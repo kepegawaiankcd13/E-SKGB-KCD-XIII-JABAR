@@ -45,6 +45,7 @@ export interface Pegawai {
   tmtBaru: string; // YYYY-MM-DD
   tmtAkanDatang: string; // YYYY-MM-DD
   noSuratBaru?: string; // Optional new document/letter number for KGB
+  tglSuratBaru?: string; // Optional new document/letter date for KGB (YYYY-MM-DD)
   
   statusKGB: "Selesai" | "Perlu Diproses" | "Mendekati Jatuh Tempo" | "Belum Selesai";
   kgbFileUrl?: string; // base64 pdf/image of finalized signed KGB document
