@@ -132,6 +132,12 @@ export default function DatabaseGrid({
   const [tmtBaru, setTmtBaru] = useState("");
   const [tmtAkanDatang, setTmtAkanDatang] = useState("");
 
+  React.useEffect(() => {
+    if (mkTahunBaru >= 32 && tmtAkanDatang !== "MAKSIMAL") {
+      setTmtAkanDatang("MAKSIMAL");
+    }
+  }, [mkTahunBaru]);
+
   const [formType, setFormType] = useState<KepegawaianType>(KepegawaianType.PNS);
   const [formActiveTab, setFormActiveTab] = useState<"pribadi" | "sk" | "pmk" | "baru">("pribadi");
 
@@ -592,12 +598,16 @@ export default function DatabaseGrid({
         setTmtBaru(tmtBaruString);
 
         // Kenaikan yang akan datang is TMT baru + 2 Years
-        const nextKgbDate = new Date(tmtBaruString);
-        nextKgbDate.setFullYear(nextKgbDate.getFullYear() + 2);
-        const yNext = nextKgbDate.getFullYear();
-        const mNext = String(nextKgbDate.getMonth() + 1).padStart(2, '0');
-        const dNext = String(nextKgbDate.getDate()).padStart(2, '0');
-        setTmtAkanDatang(`${yNext}-${mNext}-${dNext}`);
+        if (finalNewMKTahun >= 32) {
+          setTmtAkanDatang("MAKSIMAL");
+        } else {
+          const nextKgbDate = new Date(tmtBaruString);
+          nextKgbDate.setFullYear(nextKgbDate.getFullYear() + 2);
+          const yNext = nextKgbDate.getFullYear();
+          const mNext = String(nextKgbDate.getMonth() + 1).padStart(2, '0');
+          const dNext = String(nextKgbDate.getDate()).padStart(2, '0');
+          setTmtAkanDatang(`${yNext}-${mNext}-${dNext}`);
+        }
       }
     }
   };
@@ -1634,11 +1644,11 @@ export default function DatabaseGrid({
                       <div className="space-y-1.5 col-span-1 md:col-span-2">
                         <label className="text-xs font-bold text-slate-700 uppercase">Kenaikan Gaji Berkala Berikutnya (2 Tahun Mendatang) *</label>
                         <input
-                          type="date"
+                          type={tmtAkanDatang === "MAKSIMAL" ? "text" : "date"}
                           required
                           value={tmtAkanDatang}
                           onChange={(e) => setTmtAkanDatang(e.target.value)}
-                          className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                          className="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 font-bold text-slate-800"
                         />
                       </div>
                     </div>

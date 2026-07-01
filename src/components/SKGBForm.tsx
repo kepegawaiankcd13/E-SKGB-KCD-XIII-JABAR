@@ -198,12 +198,16 @@ export default function SKGBForm({
           const d = String(newTMT.getDate()).padStart(2, '0');
           updated.tmtBaru = `${y}-${m}-${d}`;
 
-          const nextTMT = new Date(updated.tmtBaru);
-          nextTMT.setFullYear(nextTMT.getFullYear() + 2);
-          const yExt = nextTMT.getFullYear();
-          const mExt = String(nextTMT.getMonth() + 1).padStart(2, '0');
-          const dExt = String(nextTMT.getDate()).padStart(2, '0');
-          updated.tmtAkanDatang = `${yExt}-${mExt}-${dExt}`;
+          if (Number(updated.mkTahunBaru || 0) >= 32) {
+            updated.tmtAkanDatang = "MAKSIMAL";
+          } else {
+            const nextTMT = new Date(updated.tmtBaru);
+            nextTMT.setFullYear(nextTMT.getFullYear() + 2);
+            const yExt = nextTMT.getFullYear();
+            const mExt = String(nextTMT.getMonth() + 1).padStart(2, '0');
+            const dExt = String(nextTMT.getDate()).padStart(2, '0');
+            updated.tmtAkanDatang = `${yExt}-${mExt}-${dExt}`;
+          }
         }
       }
     }
