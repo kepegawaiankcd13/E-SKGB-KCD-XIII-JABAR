@@ -143,6 +143,34 @@ export default function DatabaseGrid({
     }
   }, [mkTahunBaru]);
 
+  React.useEffect(() => {
+    if (!jabatan) return;
+    
+    const isGuru = jabatan.toUpperCase().includes("GURU");
+    const oldGol = pangkatGolongan.toUpperCase();
+    const newGol = pangkatGolonganBaru.toUpperCase();
+    
+    if (isGuru) {
+      // 1. 3B to 3C -> Guru Ahli Pertama to Guru Ahli Muda
+      if (oldGol.includes("III/B") && newGol.includes("III/C")) {
+        setJabatanBaru("GURU AHLI MUDA");
+      }
+      // 2. 3D to 4A -> Guru Ahli Muda to Guru Ahli Madya
+      else if (oldGol.includes("III/D") && newGol.includes("IV/A")) {
+        setJabatanBaru("GURU AHLI MADYA");
+      }
+      // 3. For any other change, if the current jabatanBaru is either empty or matching standard tags, reset/keep in sync
+      else if (!jabatanBaru || jabatanBaru === jabatan || jabatanBaru === "GURU AHLI MUDA" || jabatanBaru === "GURU AHLI MADYA" || jabatanBaru === "GURU AHLI PERTAMA") {
+        setJabatanBaru(jabatan);
+      }
+    } else {
+      // Pelaksana / Tata Usaha staff - keep in sync if empty or unchanged
+      if (!jabatanBaru || jabatanBaru === jabatan) {
+        setJabatanBaru(jabatan);
+      }
+    }
+  }, [pangkatGolongan, pangkatGolonganBaru, jabatan]);
+
   const [formType, setFormType] = useState<KepegawaianType>(KepegawaianType.PNS);
   const [formActiveTab, setFormActiveTab] = useState<"pribadi" | "sk" | "pmk" | "baru">("pribadi");
 
@@ -511,7 +539,8 @@ export default function DatabaseGrid({
         const idxNip = findHeaderIdx(["nip"], 2);
         const idxTempatLahir = findHeaderIdx(["tempat lahir"], 3);
         const idxTanggalLahir = findHeaderIdx(["tanggal lahir"], 4);
-        const idxPangkatGolongan = findHeaderIdx(["pangkat golongan", "pangkat/golongan", "pangkat", "golongan"], 5);
+        const idxPangkatGolonganBaru = findHeaderIdx(["pangkat golongan baru", "pangkat/golongan baru", "golongan baru", "pangkat baru"], 5);
+        const idxPangkatGolongan = findHeaderIdx(["pangkat golongan lama", "pangkat/golongan lama", "golongan lama", "pangkat lama", "pangkat golongan", "pangkat/golongan", "pangkat", "golongan"], 5);
         const idxJabatan = findHeaderIdx(["jabatan lama", "jabatan"], 6);
         const idxJabatanBaru = findHeaderIdx(["jabatan baru"], 7);
         const idxUnitKerja = findHeaderIdx(["unit kerja", "sekolah"], 8);
@@ -548,15 +577,37 @@ export default function DatabaseGrid({
           const nipVal = String(cell(idxNip)).trim().replace(/[^0-9]/g, "");
           if (!namaVal || !nipVal) return;
 
+          const rawPangkatGolongan = String(cell(idxPangkatGolongan)).trim();
+          const rawPangkatGolonganBaru = cell(idxPangkatGolonganBaru) ? String(cell(idxPangkatGolonganBaru)).trim() : rawPangkatGolongan;
+          const rawJabatan = String(cell(idxJabatan)).trim().toUpperCase();
+          let rawJabatanBaru = String(cell(idxJabatanBaru)).trim().toUpperCase();
+
+          // Auto-calculate Jabatan Baru if empty, or same as Jabatan but needs to be promoted based on Guru rules
+          if (!rawJabatanBaru || rawJabatanBaru === "-" || rawJabatanBaru === rawJabatan) {
+            rawJabatanBaru = rawJabatan;
+            const isGuru = rawJabatan.toUpperCase().includes("GURU");
+            const oldGol = rawPangkatGolongan.toUpperCase();
+            const newGol = rawPangkatGolonganBaru.toUpperCase();
+
+            if (isGuru) {
+              if (oldGol.includes("III/B") && newGol.includes("III/C")) {
+                rawJabatanBaru = "GURU AHLI MUDA";
+              } else if (oldGol.includes("III/D") && newGol.includes("IV/A")) {
+                rawJabatanBaru = "GURU AHLI MADYA";
+              }
+            }
+          }
+
           const pegItem: Pegawai = {
             id: `peg-import-${Date.now()}-${idx}`,
             nama: namaVal.toUpperCase(),
             nip: nipVal,
             tempatLahir: String(cell(idxTempatLahir)).trim().toUpperCase(),
             tanggalLahir: cell(idxTanggalLahir) ? String(cell(idxTanggalLahir)).trim() : "1980-01-01",
-            pangkatGolongan: String(cell(idxPangkatGolongan)).trim(),
-            jabatan: String(cell(idxJabatan)).trim().toUpperCase(),
-            jabatanBaru: String(cell(idxJabatanBaru)).trim().toUpperCase(),
+            pangkatGolongan: rawPangkatGolongan,
+            pangkatGolonganBaru: rawPangkatGolonganBaru,
+            jabatan: rawJabatan,
+            jabatanBaru: rawJabatanBaru,
             unitKerja: String(cell(idxUnitKerja)).trim().toUpperCase(),
             gajiPokokLama: Number(cell(idxGajiPokokLama, 0)),
             gajiPokokBaru: Number(cell(idxGajiPokokBaru, 0)),
