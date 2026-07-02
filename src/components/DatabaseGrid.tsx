@@ -420,26 +420,29 @@ export default function DatabaseGrid({
         return;
       }
 
-      const opt = {
-        margin: 0,
-        filename: `SKGB_${directPrintPegawai.nama.replace(/\s+/g, "_")}_${directPrintPegawai.nip}.pdf`,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2.2, // sharp crisp resolution
-          useCORS: true,
-          letterRendering: true
-        },
-        jsPDF: { 
-          unit: "mm", 
-          format: [215, 330] as [number, number], // Folio/F4 size
-          orientation: "portrait" as const
-        }
+      const generatePDF = (currentScale: number) => {
+        const opt = {
+          margin: 0,
+          filename: `SKGB_${directPrintPegawai.nama.replace(/\s+/g, "_")}_${directPrintPegawai.nip}.pdf`,
+          image: { type: "jpeg" as const, quality: 0.98 },
+          html2canvas: { 
+            scale: currentScale, 
+            useCORS: true
+          },
+          jsPDF: { 
+            unit: "mm", 
+            format: [215, 330] as [number, number], // Folio/F4 size
+            orientation: "portrait" as const
+          }
+        };
+
+        return html2pdf()
+          .set(opt)
+          .from(element)
+          .save();
       };
 
-      html2pdf()
-        .set(opt)
-        .from(element)
-        .save()
+      generatePDF(2.0)
         .then(() => {
           Swal.fire({
             title: "PDF Berhasil Diunduh!",
@@ -449,12 +452,24 @@ export default function DatabaseGrid({
           });
         })
         .catch((err: any) => {
-          console.error(err);
-          Swal.fire({
-            title: "Gagal Membuat PDF",
-            text: "Terjadi kesalahan teknis saat membuat berkas PDF.",
-            icon: "error"
-          });
+          console.warn("PDF render attempt at scale 2.0 failed, retrying at scale 1.5...", err);
+          generatePDF(1.5)
+            .then(() => {
+              Swal.fire({
+                title: "PDF Berhasil Diunduh!",
+                text: "Berkas PDF SKGB berhasil diunduh dengan penyesuaian resolusi.",
+                icon: "success",
+                confirmButtonColor: "#10b981"
+              });
+            })
+            .catch((retryErr: any) => {
+              console.error("All PDF render attempts failed:", retryErr);
+              Swal.fire({
+                title: "Gagal Membuat PDF",
+                text: `Terjadi kesalahan teknis saat membuat berkas PDF: ${retryErr?.message || retryErr || "Unknown error"}. Silakan gunakan opsi 'Cetak Manual' di browser dan simpan sebagai PDF.`,
+                icon: "error"
+              });
+            });
         });
     }).catch(err => {
       console.error(err);
