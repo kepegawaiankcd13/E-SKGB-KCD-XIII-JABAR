@@ -20,7 +20,9 @@ import {
   ChevronRight,
   Plus,
   Minus,
-  Download
+  Download,
+  ChevronDown,
+  Check
 } from "lucide-react";
 import { Pegawai, SystemSettings, KepegawaianType } from "../types";
 import Swal from "sweetalert2";
@@ -30,6 +32,7 @@ import { getSalaryByGolonganAndMasaKerja } from "../utils/salaryTable";
 interface SKGBFormProps {
   pegawaiList: Pegawai[];
   selectedPegawai: Pegawai | null;
+  onSelectPegawai?: (peg: Pegawai | null) => void;
   settings: SystemSettings;
   onLogActivity: (action: string, detail: string) => void;
 }
@@ -37,6 +40,7 @@ interface SKGBFormProps {
 export default function SKGBForm({ 
   pegawaiList, 
   selectedPegawai, 
+  onSelectPegawai,
   settings,
   onLogActivity
 }: SKGBFormProps) {
@@ -45,6 +49,24 @@ export default function SKGBForm({
   const [isManualInput, setIsManualInput] = useState(false);
   const [activePegId, setActivePegId] = useState("");
   const [lastLoadedPegId, setLastLoadedPegId] = useState("");
+  
+  // Searchable dropdown states
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Handle click outside searchable dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".custom-select-container")) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
   
   // Custom document parameters
   const [nomorSurat, setNomorSurat] = useState("");
@@ -177,12 +199,14 @@ export default function SKGBForm({
   };
 
   // Switch employee details
-  const handlePegawaiChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const pId = e.target.value;
+  const handlePegawaiChange = (pId: string) => {
     if (pId === "manual") {
       setIsManualInput(true);
       setActivePegId("manual");
       setLastLoadedPegId("manual");
+      if (onSelectPegawai) {
+        onSelectPegawai(null);
+      }
       loadTembusanForPeg(manualPeg);
       setNomorSurat(manualPeg.noSuratBaru || settings.nomorSuratCounter);
       if (manualPeg.tglSuratBaru) {
@@ -191,6 +215,10 @@ export default function SKGBForm({
     } else {
       setIsManualInput(false);
       setActivePegId(pId);
+      const found = pegawaiList.find(p => p.id === pId);
+      if (found && onSelectPegawai) {
+        onSelectPegawai(found);
+      }
     }
   };
 
@@ -270,6 +298,29 @@ export default function SKGBForm({
       "Cetak SKGB", 
       `Mengunduh/mencetak Surat Keputusan Kenaikan Gaji Berkala untuk ${activePegawai.nama} (NIP: ${activePegawai.nip}).`
     );
+
+    try {
+      if (window.self !== window.top) {
+        Swal.fire({
+          title: "Buka di Tab Baru Untuk Mencetak",
+          html: `
+            <div class="text-left text-xs text-slate-700 leading-relaxed space-y-3">
+              <p>Mencetak langsung dari dalam <strong>Panel Pratinjau (Iframe)</strong> dibatasi oleh keamanan browser bawaan sehingga dialog cetak tidak dapat muncul.</p>
+              <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-semibold leading-relaxed">
+                👉 Silakan klik tombol <strong>"Open in New Tab" / "Buka di Tab Baru"</strong> (ikon kotak dengan panah keluar di kanan atas) pada pratinjau ini, lalu cetak dari tab baru tersebut.
+              </div>
+            </div>
+          `,
+          icon: "warning",
+          confirmButtonText: "Saya Mengerti",
+          confirmButtonColor: "#4f46e5",
+        });
+        return;
+      }
+    } catch (e) {
+      // safe fallback
+    }
+
     window.print();
   };
 
@@ -304,22 +355,89 @@ export default function SKGBForm({
         <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-3.5">
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-700 tracking-wide uppercase">Pilih Pegawai Dasar</label>
-            <div className="relative">
-              <select
-                value={isManualInput ? "manual" : activePegId}
-                onChange={handlePegawaiChange}
-                className="w-full pl-3 pr-8 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-500 cursor-pointer text-slate-900"
+            <div className="relative custom-select-container">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDropdownOpen(!isDropdownOpen);
+                  setSearchTerm("");
+                }}
+                className="w-full pl-3 pr-10 py-2.5 bg-white border border-slate-250 rounded-xl text-sm font-semibold text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer text-slate-900 flex items-center justify-between shadow-sm"
               >
-                <option value="" disabled>-- Pilih dari Database Pegawai --</option>
-                {pegawaiList.map((peg) => (
-                  <option key={peg.id} value={peg.id}>
-                    {peg.nama} (NIP: {peg.nip})
-                  </option>
-                ))}
-                <option value="manual" className="text-indigo-700 font-bold bg-indigo-50/50">
-                  ★ INPUT MANUAL BARU (Instan Tanpa DB)
-                </option>
-              </select>
+                <span className="truncate">
+                  {isManualInput 
+                    ? "★ INPUT MANUAL BARU (Instan Tanpa DB)" 
+                    : activePegId 
+                      ? `${activePegawai?.nama || ""} (NIP: ${activePegawai?.nip || ""})` 
+                      : "-- Pilih dari Database Pegawai --"}
+                </span>
+                <ChevronDown size={16} className="text-slate-500 shrink-0 ml-2" />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute left-0 z-50 mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in-50 slide-in-from-top-1 duration-100">
+                  <div className="p-2 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+                    <Search size={14} className="text-slate-400 shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Cari nama atau NIP..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-transparent text-xs border-none outline-none focus:ring-0 p-0 text-slate-800"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="max-h-[220px] overflow-y-auto py-1 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePegawaiChange("manual");
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-50 flex items-center justify-between border-b border-slate-100 bg-indigo-50/30 ${isManualInput ? 'bg-indigo-50' : ''}`}
+                    >
+                      <span>★ INPUT MANUAL BARU (Instan Tanpa DB)</span>
+                      {isManualInput && <Check size={14} className="text-indigo-600" />}
+                    </button>
+
+                    {pegawaiList.filter(peg => {
+                      const nameMatch = (peg.nama || "").toLowerCase().includes(searchTerm.toLowerCase());
+                      const nipMatch = (peg.nip || "").toLowerCase().includes(searchTerm.toLowerCase());
+                      return nameMatch || nipMatch;
+                    }).length === 0 ? (
+                      <div className="px-3 py-3 text-xs text-slate-400 text-center italic">
+                        Pegawai tidak ditemukan
+                      </div>
+                    ) : (
+                      pegawaiList.filter(peg => {
+                        const nameMatch = (peg.nama || "").toLowerCase().includes(searchTerm.toLowerCase());
+                        const nipMatch = (peg.nip || "").toLowerCase().includes(searchTerm.toLowerCase());
+                        return nameMatch || nipMatch;
+                      }).map((peg) => {
+                        const isSelected = !isManualInput && activePegId === peg.id;
+                        return (
+                          <button
+                            key={peg.id}
+                            type="button"
+                            onClick={() => {
+                              handlePegawaiChange(peg.id);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 flex items-center justify-between text-slate-800 ${isSelected ? 'bg-indigo-50/50 font-bold text-indigo-900' : ''}`}
+                          >
+                            <div className="truncate">
+                              <div className="font-semibold truncate text-slate-900">{peg.nama}</div>
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">NIP: {peg.nip}</div>
+                            </div>
+                            {isSelected && <Check size={14} className="text-indigo-600 shrink-0 ml-2" />}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

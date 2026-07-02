@@ -874,6 +874,29 @@ export default function DatabaseGrid({
       "Cetak Massal SKGB", 
       `Mencetak Surat Keputusan Kenaikan Gaji Berkala secara massal untuk ${selectedPegawaiIds.length} pegawai: ${selectedNames}.`
     );
+
+    try {
+      if (window.self !== window.top) {
+        Swal.fire({
+          title: "Buka di Tab Baru Untuk Mencetak",
+          html: `
+            <div class="text-left text-xs text-slate-700 leading-relaxed space-y-3">
+              <p>Mencetak langsung dari dalam <strong>Panel Pratinjau (Iframe)</strong> dibatasi oleh keamanan browser bawaan sehingga dialog cetak tidak dapat muncul.</p>
+              <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-semibold leading-relaxed">
+                👉 Silakan klik tombol <strong>"Open in New Tab" / "Buka di Tab Baru"</strong> (ikon kotak dengan panah keluar di kanan atas) pada pratinjau ini, lalu cetak dari tab baru tersebut.
+              </div>
+            </div>
+          `,
+          icon: "warning",
+          confirmButtonText: "Saya Mengerti",
+          confirmButtonColor: "#4f46e5",
+        });
+        return;
+      }
+    } catch (e) {
+      // safe fallback
+    }
+
     window.print();
   };
 
@@ -2198,6 +2221,27 @@ export default function DatabaseGrid({
                       if (result.isConfirmed) {
                         onLogActivity("Cetak Langsung SKGB", `Mencetak SKGB langsung untuk pegawai ${directPrintPegawai.nama} (NIP: ${directPrintPegawai.nip}).`);
                         setTimeout(() => {
+                          try {
+                            if (window.self !== window.top) {
+                              Swal.fire({
+                                title: "Buka di Tab Baru Untuk Mencetak",
+                                html: `
+                                  <div class="text-left text-xs text-slate-700 leading-relaxed space-y-3">
+                                    <p>Mencetak langsung dari dalam <strong>Panel Pratinjau (Iframe)</strong> dibatasi oleh keamanan browser bawaan sehingga dialog cetak tidak dapat muncul.</p>
+                                    <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-950 font-semibold leading-relaxed">
+                                      👉 Silakan klik tombol <strong>"Open in New Tab" / "Buka di Tab Baru"</strong> (ikon kotak dengan panah keluar di kanan atas) pada pratinjau ini, lalu cetak dari tab baru tersebut.
+                                    </div>
+                                  </div>
+                                `,
+                                icon: "warning",
+                                confirmButtonText: "Saya Mengerti",
+                                confirmButtonColor: "#4f46e5",
+                              });
+                              return;
+                            }
+                          } catch (e) {
+                            // safe fallback
+                          }
                           window.print();
                         }, 250);
                       }

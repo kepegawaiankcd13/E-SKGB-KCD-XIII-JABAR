@@ -665,6 +665,7 @@ export default function App() {
             <SKGBForm 
               pegawaiList={pegawaiList}
               selectedPegawai={selectedPegawaiForCetak}
+              onSelectPegawai={setSelectedPegawaiForCetak}
               settings={settings}
               onLogActivity={handleLogActivity}
             />
