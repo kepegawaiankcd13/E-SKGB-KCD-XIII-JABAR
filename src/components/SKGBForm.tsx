@@ -44,6 +44,7 @@ export default function SKGBForm({
   // App states
   const [isManualInput, setIsManualInput] = useState(false);
   const [activePegId, setActivePegId] = useState("");
+  const [lastLoadedPegId, setLastLoadedPegId] = useState("");
   
   // Custom document parameters
   const [nomorSurat, setNomorSurat] = useState("");
@@ -83,21 +84,60 @@ export default function SKGBForm({
   useEffect(() => {
     if (selectedPegawai) {
       setIsManualInput(false);
-      setActivePegId(selectedPegawai.id);
-      loadTembusanForPeg(selectedPegawai);
-      setNomorSurat(selectedPegawai.noSuratBaru || settings.nomorSuratCounter);
-      if (selectedPegawai.tglSuratBaru) {
-        setTanggalSurat(selectedPegawai.tglSuratBaru);
+      const freshPeg = pegawaiList.find(p => p.id === selectedPegawai.id) || selectedPegawai;
+      setActivePegId(freshPeg.id);
+      
+      if (freshPeg.id !== lastLoadedPegId) {
+        setLastLoadedPegId(freshPeg.id);
+        loadTembusanForPeg(freshPeg);
+        setNomorSurat(freshPeg.noSuratBaru || settings.nomorSuratCounter);
+        if (freshPeg.tglSuratBaru) {
+          setTanggalSurat(freshPeg.tglSuratBaru);
+        } else {
+          const today = new Date();
+          const y = today.getFullYear();
+          const m = String(today.getMonth() + 1).padStart(2, '0');
+          const d = String(today.getDate()).padStart(2, '0');
+          setTanggalSurat(`${y}-${m}-${d}`);
+        }
       }
-    } else if (pegawaiList.length > 0 && !isManualInput) {
-      setActivePegId(pegawaiList[0].id);
-      loadTembusanForPeg(pegawaiList[0]);
-      setNomorSurat(pegawaiList[0].noSuratBaru || settings.nomorSuratCounter);
-      if (pegawaiList[0].tglSuratBaru) {
-        setTanggalSurat(pegawaiList[0].tglSuratBaru);
+    } else if (pegawaiList.length > 0) {
+      const exists = pegawaiList.some(p => p.id === activePegId);
+      if (!activePegId || (!exists && activePegId !== "manual")) {
+        const defaultPeg = pegawaiList[0];
+        setIsManualInput(false);
+        setActivePegId(defaultPeg.id);
+        setLastLoadedPegId(defaultPeg.id);
+        loadTembusanForPeg(defaultPeg);
+        setNomorSurat(defaultPeg.noSuratBaru || settings.nomorSuratCounter);
+        if (defaultPeg.tglSuratBaru) {
+          setTanggalSurat(defaultPeg.tglSuratBaru);
+        } else {
+          const today = new Date();
+          const y = today.getFullYear();
+          const m = String(today.getMonth() + 1).padStart(2, '0');
+          const d = String(today.getDate()).padStart(2, '0');
+          setTanggalSurat(`${y}-${m}-${d}`);
+        }
+      } else if (activePegId !== "manual" && activePegId !== lastLoadedPegId) {
+        const freshPeg = pegawaiList.find(p => p.id === activePegId);
+        if (freshPeg) {
+          setLastLoadedPegId(freshPeg.id);
+          loadTembusanForPeg(freshPeg);
+          setNomorSurat(freshPeg.noSuratBaru || settings.nomorSuratCounter);
+          if (freshPeg.tglSuratBaru) {
+            setTanggalSurat(freshPeg.tglSuratBaru);
+          } else {
+            const today = new Date();
+            const y = today.getFullYear();
+            const m = String(today.getMonth() + 1).padStart(2, '0');
+            const d = String(today.getDate()).padStart(2, '0');
+            setTanggalSurat(`${y}-${m}-${d}`);
+          }
+        }
       }
     }
-  }, [selectedPegawai, pegawaiList, settings]);
+  }, [selectedPegawai, pegawaiList, settings, activePegId, lastLoadedPegId]);
 
   // Handle setting defaults
   useEffect(() => {
@@ -142,6 +182,7 @@ export default function SKGBForm({
     if (pId === "manual") {
       setIsManualInput(true);
       setActivePegId("manual");
+      setLastLoadedPegId("manual");
       loadTembusanForPeg(manualPeg);
       setNomorSurat(manualPeg.noSuratBaru || settings.nomorSuratCounter);
       if (manualPeg.tglSuratBaru) {
@@ -150,14 +191,6 @@ export default function SKGBForm({
     } else {
       setIsManualInput(false);
       setActivePegId(pId);
-      const peg = pegawaiList.find(p => p.id === pId);
-      if (peg) {
-        loadTembusanForPeg(peg);
-        setNomorSurat(peg.noSuratBaru || settings.nomorSuratCounter);
-        if (peg.tglSuratBaru) {
-          setTanggalSurat(peg.tglSuratBaru);
-        }
-      }
     }
   };
 

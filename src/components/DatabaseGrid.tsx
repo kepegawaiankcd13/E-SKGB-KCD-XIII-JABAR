@@ -137,6 +137,12 @@ export default function DatabaseGrid({
   const [tmtBaru, setTmtBaru] = useState("");
   const [tmtAkanDatang, setTmtAkanDatang] = useState("");
 
+  // Direct print preview modal states
+  const [directPrintPegawai, setDirectPrintPegawai] = useState<Pegawai | null>(null);
+  const [directNomorSurat, setDirectNomorSurat] = useState("");
+  const [directTanggalSurat, setDirectTanggalSurat] = useState("");
+  const [directTembusanList, setDirectTembusanList] = useState<string[]>([]);
+
   React.useEffect(() => {
     if (mkTahunBaru >= 32 && tmtAkanDatang !== "MAKSIMAL") {
       setTmtAkanDatang("MAKSIMAL");
@@ -151,12 +157,17 @@ export default function DatabaseGrid({
     const newGol = pangkatGolonganBaru.toUpperCase();
     
     if (isGuru) {
+      const isOld3B = oldGol.includes("III/B") || oldGol.includes("3B");
+      const isNew3C = newGol.includes("III/C") || newGol.includes("3C");
+      const isOld3D = oldGol.includes("III/D") || oldGol.includes("3D");
+      const isNew4A = newGol.includes("IV/A") || newGol.includes("4A");
+
       // 1. 3B to 3C -> Guru Ahli Pertama to Guru Ahli Muda
-      if (oldGol.includes("III/B") && newGol.includes("III/C")) {
+      if (isOld3B && isNew3C) {
         setJabatanBaru("GURU AHLI MUDA");
       }
       // 2. 3D to 4A -> Guru Ahli Muda to Guru Ahli Madya
-      else if (oldGol.includes("III/D") && newGol.includes("IV/A")) {
+      else if (isOld3D && isNew4A) {
         setJabatanBaru("GURU AHLI MADYA");
       }
       // 3. For any other change, if the current jabatanBaru is either empty or matching standard tags, reset/keep in sync
@@ -339,6 +350,40 @@ export default function DatabaseGrid({
         });
       }
     });
+  };
+
+  const handleOpenDirectPrint = (peg: Pegawai) => {
+    setDirectPrintPegawai(peg);
+    setDirectNomorSurat(peg.noSuratBaru || settings.nomorSuratCounter);
+    
+    if (peg.tglSuratBaru) {
+      setDirectTanggalSurat(peg.tglSuratBaru);
+    } else {
+      const today = new Date();
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, '0');
+      const d = String(today.getDate()).padStart(2, '0');
+      setDirectTanggalSurat(`${y}-${m}-${d}`);
+    }
+
+    // Load default tembusan
+    const isPNS = !["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII"].includes(peg.pangkatGolongan);
+    if (isPNS) {
+      setDirectTembusanList([
+        "Kepala Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+        "Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Jawa Barat di Bandung;",
+        "Kepala Sub Bagian Keuangan dan Aset Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+        `${peg.unitKerja || "Kepala SMA/SMK Bersangkutan"};`,
+        "Pegawai Yang bersangkutan untuk diketahui dan digunakan seperlunya."
+      ]);
+    } else {
+      setDirectTembusanList([
+        "Kepala Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+        "Kepala Badan Pengelolaan Keuangan dan Aset Daerah Provinsi Jawa Barat di Bandung;",
+        "Kepala Subbag Tata Usaha Dinas Pendidikan Provinsi Jawa Barat di Bandung;",
+        "Pegawai Yang bersangkutan. Untuk diketahui dan digunakan seperlunya."
+      ]);
+    }
   };
 
   // Helper to open form for editing or adding
@@ -590,9 +635,14 @@ export default function DatabaseGrid({
             const newGol = rawPangkatGolonganBaru.toUpperCase();
 
             if (isGuru) {
-              if (oldGol.includes("III/B") && newGol.includes("III/C")) {
+              const isOld3B = oldGol.includes("III/B") || oldGol.includes("3B");
+              const isNew3C = newGol.includes("III/C") || newGol.includes("3C");
+              const isOld3D = oldGol.includes("III/D") || oldGol.includes("3D");
+              const isNew4A = newGol.includes("IV/A") || newGol.includes("4A");
+
+              if (isOld3B && isNew3C) {
                 rawJabatanBaru = "GURU AHLI MUDA";
-              } else if (oldGol.includes("III/D") && newGol.includes("IV/A")) {
+              } else if (isOld3D && isNew4A) {
                 rawJabatanBaru = "GURU AHLI MADYA";
               }
             }
@@ -1204,12 +1254,19 @@ export default function DatabaseGrid({
                       <td className="p-4 text-center">
                         <div className="inline-flex items-center justify-center space-x-1">
                           <button
-                            onClick={() => onSelectPegawaiForSKGB(peg)}
-                            className="p-1 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center justify-center text-xs font-semibold gap-1 cursor-pointer"
-                            title="Unduh & Cetak SKGB"
+                            onClick={() => handleOpenDirectPrint(peg)}
+                            className="p-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all flex items-center justify-center text-xs font-semibold gap-1 cursor-pointer"
+                            title="Pratinjau & Cetak Langsung (F4/Folio)"
                           >
-                            <FileText size={13} />
+                            <Printer size={13} />
                             <span>Cetak</span>
+                          </button>
+                          <button
+                            onClick={() => onSelectPegawaiForSKGB(peg)}
+                            className="p-1 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg transition-all flex items-center justify-center text-xs font-semibold gap-1 cursor-pointer"
+                            title="Buka Menu Cetak Lanjutan / Kustomisasi"
+                          >
+                            <FileText size={12} />
                           </button>
                           <button
                             onClick={() => openForm(peg)}
@@ -2009,6 +2066,172 @@ export default function DatabaseGrid({
         </div>
       )}
     </div>
+
+    {/* Direct Print & Pratinjau SKGB Modal */}
+    {directPrintPegawai && (
+      <div className="fixed inset-0 bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4 z-50 font-sans print:p-0 print:static print:bg-white print:inset-auto">
+        <div className="bg-white rounded-2xl w-full max-w-6xl shadow-2xl border border-slate-200 flex flex-col h-[90vh] overflow-hidden print:h-auto print:shadow-none print:border-none print:static">
+          
+          {/* Modal Header - HIDDEN ON PRINT */}
+          <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50 print:hidden">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                <Printer size={20} className="animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">Direct Print & Pratinjau SKGB</h3>
+                <p className="text-[11px] text-slate-500 font-medium">Hasilkan, edit cepat nomor/tanggal, pratinjau lembar F4, dan cetak tanpa keluar dari database.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setDirectPrintPegawai(null)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-lg cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Main split-view area */}
+          <div className="flex-1 flex overflow-hidden print:block print:overflow-visible">
+            
+            {/* Left Side Controls - HIDDEN ON PRINT */}
+            <div className="w-1/3 border-r border-slate-200 p-5 overflow-y-auto space-y-5 bg-slate-50/50 print:hidden flex flex-col justify-between">
+              <div className="space-y-5">
+                <div className="p-4 bg-emerald-50/40 border border-emerald-100 rounded-xl text-xs space-y-1">
+                  <p className="font-bold text-emerald-950">Pegawai Aktif:</p>
+                  <p className="font-semibold text-slate-700 text-sm">{directPrintPegawai.nama}</p>
+                  <p className="font-mono text-slate-500">NIP: {directPrintPegawai.nip}</p>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Parameter Dokumen</h4>
+                  
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Nomor Surat (Agenda)</label>
+                    <input
+                      type="text"
+                      value={directNomorSurat}
+                      onChange={(e) => setDirectNomorSurat(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-sm font-mono focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase">Tanggal Surat</label>
+                    <input
+                      type="date"
+                      value={directTanggalSurat}
+                      onChange={(e) => setDirectTanggalSurat(e.target.value)}
+                      className="w-full px-3 py-1.5 border border-slate-200 bg-white rounded-lg text-sm focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Daftar Tembusan</h4>
+                    <button
+                      onClick={() => setDirectTembusanList([...directTembusanList, "Tembusan baru selanjutnya;"])}
+                      className="text-[10px] text-indigo-600 hover:text-indigo-800 font-bold flex items-center gap-0.5 cursor-pointer"
+                    >
+                      + Tambah
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+                    {directTembusanList.map((temb, idx) => (
+                      <div key={idx} className="flex gap-1.5 items-center">
+                        <input
+                          type="text"
+                          value={temb}
+                          onChange={(e) => {
+                            const updated = [...directTembusanList];
+                            updated[idx] = e.target.value;
+                            setDirectTembusanList(updated);
+                          }}
+                          className="flex-1 px-2.5 py-1 text-xs border border-slate-200 bg-white rounded focus:border-emerald-500 text-slate-700"
+                        />
+                        <button
+                          onClick={() => setDirectTembusanList(directTembusanList.filter((_, i) => i !== idx))}
+                          className="p-1 hover:bg-rose-50 text-rose-500 rounded border border-transparent hover:border-rose-100 cursor-pointer"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200/60 space-y-3">
+                <button
+                  onClick={() => {
+                    // Save manual edits to the pegawai's persistent profile first!
+                    const updatedPegawai = {
+                      ...directPrintPegawai,
+                      noSuratBaru: directNomorSurat,
+                      tglSuratBaru: directTanggalSurat
+                    };
+                    onUpdatePegawai(directPrintPegawai.id, updatedPegawai);
+                    onLogActivity("Simpan Parameter SKGB", `Menyimpan nomor surat (${directNomorSurat}) dan tanggal surat (${directTanggalSurat}) langsung dari pratinjau untuk ${directPrintPegawai.nama}.`);
+
+                    Swal.fire({
+                      title: "PETUNJUK UNDUH / CETAK",
+                      html: `
+                        <div class="text-left text-xs text-slate-700 leading-relaxed space-y-2">
+                          <p class="font-bold text-slate-900 border-b pb-1.5 mb-2">Pada dialog cetak browser Anda yang akan muncul setelah ini:</p>
+                          <div class="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100 font-medium">
+                            <p>1. Atur <strong class="text-indigo-650 font-bold">Sisi Tujuan (Destination)</strong> ke <strong>"Save as PDF"</strong> atau printer fisik.</p>
+                            <p>2. Atur <strong class="text-indigo-650 font-bold">Ukuran Kertas (Paper Size)</strong> ke <strong>"Folio"</strong> / <strong>"F4"</strong>.</p>
+                            <p>3. <strong>HILANGKAN CENTANG</strong> pada <strong>"Headers and footers"</strong>.</p>
+                            <p>4. <strong>WAJIB CENTANG</strong> pada <span class="text-emerald-600 font-bold">"Background graphics"</span> agar Kop Dinas & TTE tercetak sempurna.</p>
+                          </div>
+                        </div>
+                      `,
+                      icon: "info",
+                      confirmButtonText: "Buka Dialog Cetak",
+                      confirmButtonColor: "#10b981",
+                      showCancelButton: true,
+                      cancelButtonText: "Batal",
+                      cancelButtonColor: "#475569"
+                    }).then((result) => {
+                      if (result.isConfirmed) {
+                        onLogActivity("Cetak Langsung SKGB", `Mencetak SKGB langsung untuk pegawai ${directPrintPegawai.nama} (NIP: ${directPrintPegawai.nip}).`);
+                        setTimeout(() => {
+                          window.print();
+                        }, 250);
+                      }
+                    });
+                  }}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-bounce-subtle"
+                >
+                  <Printer size={14} />
+                  <span>Cetak / Simpan PDF Sekarang</span>
+                </button>
+                <p className="text-[10px] text-center text-slate-400 font-medium">
+                  Nomor & tanggal surat akan disinkronkan otomatis ke profil pegawai.
+                </p>
+              </div>
+            </div>
+
+            {/* Right Side Sheet Preview - VISIBLE ON PRINT */}
+            <div className="flex-1 bg-slate-900 p-6 overflow-auto flex justify-center print:p-0 print:bg-white print:block print:static print:overflow-visible">
+              <div className="origin-top scale-[0.80] md:scale-[0.85] xl:scale-[0.95] shrink-0 print:scale-100 print:transform-none">
+                <PrintTemplate
+                  pegawai={directPrintPegawai}
+                  settings={settings}
+                  nomorSurat={directNomorSurat}
+                  tanggalSurat={directTanggalSurat}
+                  tembusanList={directTembusanList}
+                />
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    )}
 
     {/* Hidden printable templates for bulk printing */}
     <div className="hidden print:block space-y-0 bg-white">

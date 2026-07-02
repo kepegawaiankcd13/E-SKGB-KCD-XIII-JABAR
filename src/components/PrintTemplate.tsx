@@ -25,13 +25,72 @@ export default function PrintTemplate({
   // Helper to format name and preserve academic casing of titles (degrees)
   const formatNamaDanGelar = (namaLengkap: string) => {
     if (!namaLengkap) return "";
-    const commaIdx = namaLengkap.indexOf(",");
-    if (commaIdx !== -1) {
-      const namaUtama = namaLengkap.slice(0, commaIdx).toUpperCase().trim();
-      const gList = namaLengkap.slice(commaIdx).trim(); // Keep original casing of degrees
-      return `${namaUtama}${gList}`;
+    const parts = namaLengkap.split(",");
+    let mainName = parts[0];
+
+    // Format prefix degrees if any (Drs., Dra., Ir., Dr., Prof.) at the beginning
+    const prefixRegex = /^(drs|dra|ir|dr|prof)\.?\s+/i;
+    const prefixMatch = mainName.match(prefixRegex);
+    let prefix = "";
+    if (prefixMatch) {
+      const rawPrefix = prefixMatch[1].toLowerCase();
+      if (rawPrefix === "drs") prefix = "Drs. ";
+      else if (rawPrefix === "dra") prefix = "Dra. ";
+      else if (rawPrefix === "ir") prefix = "Ir. ";
+      else if (rawPrefix === "dr") prefix = "Dr. ";
+      else if (rawPrefix === "prof") prefix = "Prof. ";
+      mainName = mainName.substring(prefixMatch[0].length);
     }
-    return namaLengkap.toUpperCase().trim();
+
+    mainName = prefix + mainName.toUpperCase().trim();
+    if (parts.length === 1) return mainName;
+
+    const degreeParts = parts.slice(1).map(deg => {
+      const d = deg.trim();
+      const lower = d.toLowerCase();
+      if (lower === "s.pd" || lower === "s.pd.") return "S.Pd.";
+      if (lower === "m.pd" || lower === "m.pd.") return "M.Pd.";
+      if (lower === "m.si" || lower === "m.si.") return "M.Si.";
+      if (lower === "s.si" || lower === "s.si.") return "S.Si.";
+      if (lower === "s.kom" || lower === "s.kom.") return "S.Kom.";
+      if (lower === "m.kom" || lower === "m.kom.") return "M.Kom.";
+      if (lower === "s.e" || lower === "s.e.") return "S.E.";
+      if (lower === "m.m" || lower === "m.m.") return "M.M.";
+      if (lower === "s.h" || lower === "s.h.") return "S.H.";
+      if (lower === "m.h" || lower === "m.h.") return "M.H.";
+      if (lower === "s.t" || lower === "s.t.") return "S.T.";
+      if (lower === "m.t" || lower === "m.t.") return "M.T.";
+      if (lower === "s.sos" || lower === "s.sos.") return "S.Sos.";
+      if (lower === "s.ip" || lower === "s.ip.") return "S.IP.";
+      if (lower === "s.psi" || lower === "s.psi.") return "S.Psi.";
+      if (lower === "s.ag" || lower === "s.ag.") return "S.Ag.";
+      if (lower === "s.pd.i" || lower === "s.pd.i.") return "S.Pd.I.";
+      if (lower === "m.pd.i" || lower === "m.pd.i.") return "M.Pd.I.";
+      if (lower === "s.sn" || lower === "s.sn.") return "S.Sn.";
+      if (lower === "m.sn" || lower === "m.sn.") return "M.Sn.";
+      if (lower === "s.hut" || lower === "s.hut.") return "S.Hut.";
+      if (lower === "s.p" || lower === "s.p.") return "S.P.";
+      if (lower === "dr" || lower === "dr.") return "Dr.";
+      if (lower === "drs" || lower === "drs.") return "Drs.";
+      if (lower === "dra" || lower === "dra.") return "Dra.";
+      if (lower === "ir" || lower === "ir.") return "Ir.";
+
+      // Fallback: title case
+      return d.replace(/\b[a-z]/g, char => char.toUpperCase());
+    });
+
+    return `${mainName}, ${degreeParts.join(", ")}`;
+  };
+
+  // Helper to format city name to Title Case (e.g. CIAMIS -> Ciamis, KABUPATEN CIAMIS -> Kabupaten Ciamis)
+  const formatNamaKota = (zipStr: string) => {
+    if (!zipStr) return "Ciamis";
+    const cityPart = zipStr.split(/[–-]/)[0].trim();
+    return cityPart
+      .toLowerCase()
+      .split(" ")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   // Custom Jabar Logo SVG 
@@ -148,19 +207,19 @@ export default function PrintTemplate({
           {/* Left Metadata Parameters */}
           <div className="space-y-1.5 flex flex-col justify-start">
             <div className="flex items-start">
-              <span className="w-16 shrink-0 inline-block font-medium">Nomor</span>
-              <span className="mr-2">:</span>
-              <span className="font-semibold tracking-wide font-mono print:font-sans break-all">{nomorSurat}</span>
+              <span className="w-14 shrink-0 inline-block font-normal">Nomor</span>
+              <span className="mr-1.5 font-normal text-black">:</span>
+              <span className="font-normal tracking-wide font-mono print:font-sans break-all">{nomorSurat}</span>
             </div>
             <div className="flex items-start">
-              <span className="w-16 shrink-0 inline-block font-medium">Sifat</span>
-              <span className="mr-2">:</span>
-              <span>Biasa</span>
+              <span className="w-14 shrink-0 inline-block font-normal">Sifat</span>
+              <span className="mr-1.5 font-normal text-black">:</span>
+              <span className="font-normal">Biasa</span>
             </div>
             <div className="flex items-start">
-              <span className="w-16 shrink-0 inline-block font-medium">Perihal</span>
-              <span className="mr-2">:</span>
-              <span className="font-bold flex-1 leading-tight">
+              <span className="w-14 shrink-0 inline-block font-normal">Perihal</span>
+              <span className="mr-1.5 font-normal text-black">:</span>
+              <span className="font-normal flex-1 leading-tight">
                 Pemberitahuan Kenaikan Gaji<br />Berkala
               </span>
             </div>
@@ -169,17 +228,17 @@ export default function PrintTemplate({
           {/* Right Destination / Date Block */}
           <div className="flex flex-col items-start pl-8 print:pl-4 space-y-1 text-left">
             <div className="mb-1 font-normal">
-              {settings.kop.kabupatenZip.split("–")[0].trim() || "Ciamis"}, {formatFriendlyDate(tanggalSurat)}
+              {formatNamaKota(settings.kop.kabupatenZip)}, {formatFriendlyDate(tanggalSurat)}
             </div>
-            <div className="font-medium text-black">Kepada</div>
-            <div className="font-bold text-black leading-tight">Yth. Sdr. Asisten Administrasi pada</div>
-            <div className="pl-[2.2rem] text-slate-900 leading-tight font-medium">
+            <div className="font-normal text-black pl-[1.9rem]">Kepada</div>
+            <div className="font-normal text-black leading-tight">Yth. Sdr. Asisten Administrasi pada</div>
+            <div className="pl-[2.2rem] text-slate-900 leading-tight font-normal">
               Sekretariat Daerah Provinsi Jawa Barat
             </div>
-            <div className="text-black">
+            <div className="text-black font-normal">
               di
             </div>
-            <div className="pl-[2.2rem] font-bold text-black uppercase tracking-[0.25em] text-[10pt] print:text-[8.8pt]">
+            <div className="pl-[2.2rem] font-normal text-black uppercase tracking-[0.25em] text-[10pt] print:text-[8.8pt]">
               Bandung
             </div>
           </div>
@@ -196,48 +255,48 @@ export default function PrintTemplate({
         <div className="mt-3 pl-4 text-[10pt] print:text-[8.8pt] leading-relaxed space-y-1 text-black">
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">1.</span>
-            <span className="w-72 shrink-0 inline-block uppercase">NAMA/ TEMPAT DAN TANGGAL LAHIR</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-bold text-black uppercase flex-1">
-              {pegawai.nama} / {pegawai.tempatLahir}, {formatFriendlyDate(pegawai.tanggalLahir)}
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Nama/Tempat dan tanggal lahir</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-bold text-black flex-1">
+              {formatNamaDanGelar(pegawai.nama)} / {pegawai.tempatLahir.toUpperCase()}, {formatFriendlyDate(pegawai.tanggalLahir).toUpperCase()}
             </span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">2.</span>
-            <span className="w-72 shrink-0 inline-block uppercase">NIP</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-semibold font-mono print:font-sans text-black tracking-wide flex-1">
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">NIP</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal font-mono print:font-sans text-black tracking-wide flex-1">
               {pegawai.nip}
             </span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">3.</span>
-            <span className="w-72 shrink-0 inline-block uppercase">PANGKAT GOLONGAN RUANG</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-bold text-black uppercase flex-1">{pegawai.pangkatGolongan}</span>
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Pangkat Golongan ruang</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal text-black uppercase flex-1">{pegawai.pangkatGolongan}</span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">4.</span>
-            <span className="w-72 shrink-0 inline-block uppercase">JABATAN</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-semibold text-black uppercase flex-1 leading-snug">{pegawai.jabatan}</span>
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Jabatan</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal text-black uppercase flex-1 leading-snug">{pegawai.jabatan}</span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">5.</span>
-            <span className="w-72 shrink-0 inline-block uppercase">UNIT KERJA</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-bold text-black uppercase flex-1 leading-snug">{pegawai.unitKerja}</span>
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Unit Kerja</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal text-black uppercase flex-1 leading-snug">{pegawai.unitKerja}</span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">6.</span>
-            <span className="w-72 shrink-0 inline-block uppercase">GAJI POKOK</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-semibold text-black flex-1">{formatRupiah(pegawai.gajiPokokLama)}</span>
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Gaji pokok (Rp.)</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal text-black flex-1">{formatRupiah(pegawai.gajiPokokLama)}</span>
           </div>
         </div>
 
@@ -247,34 +306,34 @@ export default function PrintTemplate({
           
           <div className="mt-1.5 pl-8 space-y-1">
             <div className="flex items-start">
-              <span className="w-6 inline-block font-sans">A.</span>
-              <span className="w-64 inline-block uppercase font-sans">OLEH PEJABAT</span>
-              <span className="mx-2 font-semibold text-black shrink-0">:</span>
-              <span className="font-bold text-black uppercase leading-tight">{pegawai.skOlehPejabat}</span>
+              <span className="w-6 inline-block font-sans">a.</span>
+              <span className="w-[220px] inline-block font-normal text-black font-sans">Oleh Pejabat</span>
+              <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+              <span className="font-normal text-black uppercase leading-tight">{pegawai.skOlehPejabat}</span>
             </div>
 
             <div className="flex items-start">
-              <span className="w-6 inline-block font-sans">B.</span>
-              <span className="w-64 inline-block uppercase font-sans">TANGGAL DAN NOMOR</span>
-              <span className="mx-2 font-semibold text-black shrink-0">:</span>
-              <span className="font-bold text-black uppercase">
-                {formatFriendlyDate(pegawai.skTanggal)} / {pegawai.skNomor}
+              <span className="w-6 inline-block font-sans">b.</span>
+              <span className="w-[220px] inline-block font-normal text-black font-sans">Tanggal dan Nomor</span>
+              <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+              <span className="font-normal text-black uppercase">
+                {formatFriendlyDate(pegawai.skTanggal).toUpperCase()}, NO. {pegawai.skNomor.toUpperCase()}
               </span>
             </div>
 
             <div className="flex items-start">
-              <span className="w-6 inline-block font-sans">C.</span>
-              <span className="w-64 inline-block uppercase font-sans">TANGGAL MULAI BERLAKU GAJI</span>
-              <span className="mx-2 font-semibold text-black shrink-0">:</span>
-              <span className="font-bold text-black uppercase">{formatFriendlyDate(pegawai.skTglMulaiBerlaku)}</span>
+              <span className="w-6 inline-block font-sans">c.</span>
+              <span className="w-[220px] inline-block font-normal text-black font-sans">Tanggal mulai berlaku gaji</span>
+              <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+              <span className="font-normal text-black uppercase">{formatFriendlyDate(pegawai.skTglMulaiBerlaku).toUpperCase()}</span>
             </div>
 
             <div className="flex items-start">
-              <span className="w-6 inline-block font-sans">D.</span>
-              <span className="w-64 inline-block uppercase font-sans">MASA KERJA PADA TANGGAL TERSEBUT</span>
-              <span className="mx-2 font-semibold text-black shrink-0">:</span>
-              <span className="font-bold text-black uppercase">
-                {pegawai.skMasaKerjaTahun} Tahun {pegawai.skMasaKerjaBulan} Bulan
+              <span className="w-6 inline-block font-sans">d.</span>
+              <span className="w-[220px] inline-block font-normal text-black font-sans">Masa kerja pada tanggal tersebut</span>
+              <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+              <span className="font-normal text-black">
+                {pegawai.skMasaKerjaTahun} tahun {pegawai.skMasaKerjaBulan} bulan
               </span>
             </div>
           </div>
@@ -291,57 +350,60 @@ export default function PrintTemplate({
         <div className="mt-3 pl-4 text-[10pt] print:text-[8.8pt] leading-relaxed space-y-1 text-black">
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">7.</span>
-            <span className="w-72 shrink-0 inline-block uppercase text-black">GAJI POKOK BARU</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-extrabold text-black flex-1">
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Gaji pokok baru (Rp.)</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-bold text-black flex-1">
               {formatRupiah(pegawai.gajiPokokBaru)}
             </span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">8.</span>
-            <span className="w-72 shrink-0 inline-block uppercase text-black">BERDASARKAN MASA KERJA GOLONGAN</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-bold text-black flex-1">
-              {pegawai.mkTahunBaru} Tahun {pegawai.mkBulanBaru} Bulan
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Berdasarkan masa kerja golongan</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal text-black flex-1">
+              {pegawai.mkTahunBaru} tahun {pegawai.mkBulanBaru} bulan
             </span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">9.</span>
-            <span className="w-72 shrink-0 inline-block uppercase text-black">DALAM PANGKAT/GOLONGAN RUANG</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-bold text-black uppercase flex-1">{pegawai.pangkatGolonganBaru || pegawai.pangkatGolongan}</span>
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Dalam Pangkat / Golongan ruang</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal text-black uppercase flex-1">{pegawai.pangkatGolonganBaru || pegawai.pangkatGolongan}</span>
           </div>
 
           {pegawai.jabatanBaru && pegawai.jabatanBaru !== pegawai.jabatan && (
             <div className="flex items-start">
               <span className="w-6 shrink-0 inline-block"></span>
-              <span className="w-72 shrink-0 inline-block uppercase text-black font-semibold text-xs pl-6">DALAM JABATAN BARU</span>
-              <span className="mx-2 font-semibold text-black shrink-0">:</span>
-              <span className="font-bold text-black uppercase flex-1">{pegawai.jabatanBaru}</span>
+              <span className="w-[235px] shrink-0 inline-block font-normal text-black pl-6">Dalam Jabatan baru</span>
+              <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+              <span className="font-normal text-black uppercase flex-1">{pegawai.jabatanBaru}</span>
             </div>
           )}
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">10.</span>
-            <span className="w-72 shrink-0 inline-block uppercase font-bold text-black">TERHITUNG MULAI TANGGAL</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-extrabold text-black flex-1">{formatFriendlyDate(pegawai.tmtBaru)}</span>
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">Terhitung mulai tanggal</span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-bold text-black flex-1">{formatFriendlyDate(pegawai.tmtBaru).toUpperCase()}</span>
           </div>
 
           <div className="flex items-start">
             <span className="w-6 shrink-0 inline-block">11.</span>
-            <span className="w-72 shrink-0 inline-block uppercase text-black">KENAIKAN YANG AKAN DATANG BILA MEMENUHI SYARAT</span>
-            <span className="mx-2 font-semibold text-black shrink-0">:</span>
-            <span className="font-bold text-black flex-1">{formatFriendlyDate(pegawai.tmtAkanDatang)}</span>
+            <span className="w-[235px] shrink-0 inline-block font-normal text-black">
+              Kenaikan yang akan datang bila<br />
+              <span className="pl-0">Memenuhi syarat</span>
+            </span>
+            <span className="mr-1.5 font-normal text-black shrink-0">:</span>
+            <span className="font-normal text-black flex-1">{formatFriendlyDate(pegawai.tmtAkanDatang).toUpperCase()}</span>
           </div>
         </div>
 
         {/* LEGISLATION INSTRUCTION FOOTER */}
         <div className="mt-4 text-[10pt] print:text-[8.8pt] text-justify leading-relaxed font-sans first-letter:uppercase text-black">
           <p>
-            Diharapkan kepada Pegawai tersebut dibayarkan penghasilan gaji pokok baru sesuai dengan <span className="font-bold underline">{regulasi}</span>.
+            Diharapkan kepada Pegawai tersebut dibayarkan penghasilan gaji pokok baru sesuai dengan <span className="underline font-normal">{regulasi}</span>.
           </p>
         </div>
       </div>      {/* FOOTER SECTION: SIGNATURE & COPIES (TEMBUSAN) - Placed at the very bottom */}
