@@ -65,7 +65,7 @@ interface DatabaseGridProps {
   pegawaiList: Pegawai[];
   onAddPegawai: (pegawai: Pegawai) => void;
   onImportPegawaiBatch?: (pegawaiList: Pegawai[]) => Promise<void>;
-  onUpdatePegawai: (id: string, updated: Pegawai) => void;
+  onUpdatePegawai: (id: string, updated: Pegawai, silent?: boolean) => void;
   onDeletePegawai: (id: string) => void;
   onClearAllPegawai?: () => void;
   onSelectPegawaiForSKGB: (pegawai: Pegawai) => void;
@@ -384,6 +384,86 @@ export default function DatabaseGrid({
         "Pegawai Yang bersangkutan. Untuk diketahui dan digunakan seperlunya."
       ]);
     }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!directPrintPegawai) return;
+    
+    // Save manual edits to the pegawai's persistent profile first, silently!
+    const updatedPegawai = {
+      ...directPrintPegawai,
+      noSuratBaru: directNomorSurat,
+      tglSuratBaru: directTanggalSurat
+    };
+    onUpdatePegawai(directPrintPegawai.id, updatedPegawai, true);
+    onLogActivity("Unduh PDF SKGB", `Mengunduh berkas PDF SKGB untuk ${directPrintPegawai.nama} (NIP: ${directPrintPegawai.nip}).`);
+
+    Swal.fire({
+      title: "Membuat File PDF...",
+      text: "Mohon tunggu sejenak, berkas PDF sedang di-render dengan kualitas tinggi.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    import("html2pdf.js").then((html2pdfModule) => {
+      const html2pdf = html2pdfModule.default;
+      const element = document.getElementById("skgb-direct-print-preview-container");
+      
+      if (!element) {
+        Swal.fire({
+          title: "Kesalahan",
+          text: "Gagal menemukan area dokumen untuk diunduh.",
+          icon: "error"
+        });
+        return;
+      }
+
+      const opt = {
+        margin: 0,
+        filename: `SKGB_${directPrintPegawai.nama.replace(/\s+/g, "_")}_${directPrintPegawai.nip}.pdf`,
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 2.2, // sharp crisp resolution
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: "mm", 
+          format: [215, 330] as [number, number], // Folio/F4 size
+          orientation: "portrait" as const
+        }
+      };
+
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .save()
+        .then(() => {
+          Swal.fire({
+            title: "PDF Berhasil Diunduh!",
+            text: "Berkas PDF SKGB telah berhasil disimpan ke perangkat Anda.",
+            icon: "success",
+            confirmButtonColor: "#10b981"
+          });
+        })
+        .catch((err: any) => {
+          console.error(err);
+          Swal.fire({
+            title: "Gagal Membuat PDF",
+            text: "Terjadi kesalahan teknis saat membuat berkas PDF.",
+            icon: "error"
+          });
+        });
+    }).catch(err => {
+      console.error(err);
+      Swal.fire({
+        title: "Gagal Mengunduh",
+        text: "Gagal memuat modul PDF generator.",
+        icon: "error"
+      });
+    });
   };
 
   // Helper to open form for editing or adding
@@ -2195,7 +2275,7 @@ export default function DatabaseGrid({
                       noSuratBaru: directNomorSurat,
                       tglSuratBaru: directTanggalSurat
                     };
-                    onUpdatePegawai(directPrintPegawai.id, updatedPegawai);
+                    onUpdatePegawai(directPrintPegawai.id, updatedPegawai, true); // SILENT UPDATE!
                     onLogActivity("Simpan Parameter SKGB", `Menyimpan nomor surat (${directNomorSurat}) dan tanggal surat (${directTanggalSurat}) langsung dari pratinjau untuk ${directPrintPegawai.nama}.`);
 
                     Swal.fire({
@@ -2213,7 +2293,7 @@ export default function DatabaseGrid({
                       `,
                       icon: "info",
                       confirmButtonText: "Buka Dialog Cetak",
-                      confirmButtonColor: "#10b981",
+                      confirmButtonColor: "#4f46e5",
                       showCancelButton: true,
                       cancelButtonText: "Batal",
                       cancelButtonColor: "#475569"
@@ -2247,11 +2327,20 @@ export default function DatabaseGrid({
                       }
                     });
                   }}
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-bounce-subtle"
+                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Printer size={14} />
-                  <span>Cetak / Simpan PDF Sekarang</span>
+                  <Printer size={13} />
+                  <span>Cetak Manual (Dialog Browser)</span>
                 </button>
+
+                <button
+                  onClick={handleDownloadPDF}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-bounce-subtle"
+                >
+                  <Download size={14} />
+                  <span>Unduh File PDF (.pdf) - REKOMENDASI</span>
+                </button>
+
                 <p className="text-[10px] text-center text-slate-400 font-medium">
                   Nomor & tanggal surat akan disinkronkan otomatis ke profil pegawai.
                 </p>
@@ -2261,13 +2350,15 @@ export default function DatabaseGrid({
             {/* Right Side Sheet Preview - VISIBLE ON PRINT */}
             <div className="flex-1 bg-slate-900 p-6 overflow-auto flex justify-center print:p-0 print:bg-white print:block print:static print:overflow-visible">
               <div className="origin-top scale-[0.80] md:scale-[0.85] xl:scale-[0.95] shrink-0 print:scale-100 print:transform-none">
-                <PrintTemplate
-                  pegawai={directPrintPegawai}
-                  settings={settings}
-                  nomorSurat={directNomorSurat}
-                  tanggalSurat={directTanggalSurat}
-                  tembusanList={directTembusanList}
-                />
+                <div id="skgb-direct-print-preview-container">
+                  <PrintTemplate
+                    pegawai={directPrintPegawai}
+                    settings={settings}
+                    nomorSurat={directNomorSurat}
+                    tanggalSurat={directTanggalSurat}
+                    tembusanList={directTembusanList}
+                  />
+                </div>
               </div>
             </div>
 

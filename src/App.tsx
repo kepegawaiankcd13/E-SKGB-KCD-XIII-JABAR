@@ -457,27 +457,31 @@ export default function App() {
     }
   };
 
-  const handleUpdatePegawai = async (id: string, updated: Pegawai) => {
+  const handleUpdatePegawai = async (id: string, updated: Pegawai, silent: boolean = false) => {
     try {
       setPegawaiList((prev) => prev.map((p) => (p.id === id ? updated : p)));
       await savePegawaiToFirestore(updated);
       handleLogActivity("Ubah Profil", `Mengubah profil rincian pegawai bernama ${updated.nama} (NIP: ${updated.nip}).`);
       
-      Swal.fire({
-        title: "Pengubahan Disimpan!",
-        html: `Profil pegawai <strong class="text-indigo-600">${updated.nama}</strong> berhasil diperbarui di database cloud server.`,
-        icon: "success",
-        confirmButtonColor: "#4f46e5",
-        confirmButtonText: "Baik",
-      });
+      if (!silent) {
+        Swal.fire({
+          title: "Pengubahan Disimpan!",
+          html: `Profil pegawai <strong class="text-indigo-600">${updated.nama}</strong> berhasil diperbarui di database cloud server.`,
+          icon: "success",
+          confirmButtonColor: "#4f46e5",
+          confirmButtonText: "Baik",
+        });
+      }
     } catch (err) {
       console.error(err);
-      Swal.fire({
-        title: "Perubahan Gagal Sinkron",
-        text: "Perubahan hanya diperbarui di penyimpanan lokal.",
-        icon: "error",
-        confirmButtonColor: "#e11d48"
-      });
+      if (!silent) {
+        Swal.fire({
+          title: "Perubahan Gagal Sinkron",
+          text: "Perubahan hanya diperbarui di penyimpanan lokal.",
+          icon: "error",
+          confirmButtonColor: "#e11d48"
+        });
+      }
     }
   };
 

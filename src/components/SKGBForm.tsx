@@ -324,6 +324,80 @@ export default function SKGBForm({
     window.print();
   };
 
+  const handleDownloadPDF = () => {
+    onLogActivity(
+      "Unduh PDF SKGB", 
+      `Mengunduh berkas PDF SKGB untuk ${activePegawai.nama} (NIP: ${activePegawai.nip}) secara instan.`
+    );
+
+    Swal.fire({
+      title: "Membuat File PDF...",
+      text: "Mohon tunggu sejenak, berkas PDF sedang di-render dengan kualitas tinggi.",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    import("html2pdf.js").then((html2pdfModule) => {
+      const html2pdf = html2pdfModule.default;
+      const element = document.getElementById("skgb-form-preview-container");
+      
+      if (!element) {
+        Swal.fire({
+          title: "Kesalahan",
+          text: "Gagal menemukan area dokumen untuk diunduh.",
+          icon: "error"
+        });
+        return;
+      }
+
+      const opt = {
+        margin: 0,
+        filename: `SKGB_${activePegawai.nama.replace(/\s+/g, "_")}_${activePegawai.nip}.pdf`,
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 2.2, // sharp crisp resolution
+          useCORS: true,
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: "mm", 
+          format: [215, 330] as [number, number], // Folio/F4 size
+          orientation: "portrait" as const
+        }
+      };
+
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .save()
+        .then(() => {
+          Swal.fire({
+            title: "PDF Berhasil Diunduh!",
+            text: "Berkas PDF SKGB telah berhasil disimpan ke perangkat Anda.",
+            icon: "success",
+            confirmButtonColor: "#10b981"
+          });
+        })
+        .catch((err: any) => {
+          console.error(err);
+          Swal.fire({
+            title: "Gagal Membuat PDF",
+            text: "Terjadi kesalahan teknis saat membuat berkas PDF.",
+            icon: "error"
+          });
+        });
+    }).catch(err => {
+      console.error(err);
+      Swal.fire({
+        title: "Gagal Mengunduh",
+        text: "Gagal memuat modul PDF generator.",
+        icon: "error"
+      });
+    });
+  };
+
   // Tembusan manipulations
   const handleTembusanChange = (index: number, val: string) => {
     const list = [...tembusanList];
@@ -816,54 +890,27 @@ export default function SKGBForm({
               ))}
             </div>
           </div>
-        </div>
 
-        {/* PRINT TRIGGER BUTTONS */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
+          {/* PRINT TRIGGER BUTTONS */}
+          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2.5">
           <button
             onClick={handlePrint}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-xl text-sm shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer inline-flex items-center justify-center space-x-2"
+            className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold rounded-xl text-xs flex items-center justify-center space-x-2 cursor-pointer"
           >
-            <Printer size={16} />
-            <span>Cetak Dokumen / Simpan PDF</span>
+            <Printer size={14} />
+            <span>Cetak Manual (Dialog Browser)</span>
           </button>
 
           <button
-            onClick={() => {
-              Swal.fire({
-                title: "PETUNJUK UNDUH PDF F4",
-                html: `
-                  <div class="text-left text-xs text-slate-705 leading-relaxed space-y-2">
-                    <p class="font-bold text-slate-900 border-b pb-1.5 mb-2">Pada dialog cetak browser Anda yang akan muncul setelah ini:</p>
-                    <div class="space-y-1 bg-slate-50 p-2.5 rounded-lg border border-slate-100 font-medium">
-                      <p>1. Atur <strong class="text-indigo-600">Sisi Tujuan (Destination)</strong> ke <strong>"Save as PDF"</strong> / "Simpan sebagai PDF".</p>
-                      <p>2. Atur <strong class="text-indigo-600">Ukuran Kertas (Paper Size)</strong> ke <strong>"Folio"</strong> / <strong>"F4"</strong> (atau "Legal" jika Folio tidak ada).</p>
-                      <p>3. <strong>HILANGKAN CENTANG</strong> pada <strong>"Headers and footers"</strong> (Tajuk dan kaki halaman) agar bersih.</p>
-                      <p>4. <strong>WAJIB CENTANG</strong> pada <span class="text-emerald-600 font-bold">"Background graphics"</span> (Grafis latar belakang) agar Kop Dinas Jawa Barat & TTE terunduh sempurna.</p>
-                      <p>5. Klik tombol <strong>"Save"</strong> / "Simpan".</p>
-                    </div>
-                  </div>
-                `,
-                icon: "info",
-                confirmButtonText: "Buka Dialog Cetak",
-                confirmButtonColor: "#10b981",
-                showCancelButton: true,
-                cancelButtonText: "Batal",
-                cancelButtonColor: "#475569"
-              }).then((result) => {
-                if (result.isConfirmed) {
-                  handlePrint();
-                }
-              });
-            }}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer inline-flex items-center justify-center space-x-2 animate-pulse-subtle"
+            onClick={handleDownloadPDF}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-sm shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 cursor-pointer inline-flex items-center justify-center space-x-2 animate-pulse-subtle"
           >
             <Download size={16} />
-            <span>Unduh PDF Langsung (.pdf)</span>
+            <span>Unduh PDF Langsung (.pdf) - REKOMENDASI</span>
           </button>
           
           <p className="text-[10px] text-center text-slate-400 font-medium leading-relaxed">
-            Mendukung pencetakan langsung ke printer fisik atau simpan format PDF F4 / Folio dengan Margin Atas 1cm & Margin Samping 0.8cm untuk hasil yang sangat presisi dan rapi.
+            Mendukung pengunduhan berkas PDF secara instan, atau pencetakan fisik langsung ke printer dengan margin F4 / Folio yang presisi dan rapi.
           </p>
         </div>
       </div>
@@ -889,15 +936,17 @@ export default function SKGBForm({
         {/* Scrollable container with high contrast margins resembling F4/Folio print sheet */}
         <div className="flex-1 overflow-auto bg-slate-800 p-2.5 md:p-6 rounded-xl flex justify-center print:p-0 print:block print:bg-white print:static print:overflow-visible">
           <div className="print:m-0 shrink-0 shadow-lg transform scale-90 md:scale-95 xl:scale-100 origin-top print:scale-100 print:transform-none">
-            <PrintTemplate
-              pegawai={activePegawai}
-              settings={settings}
-              nomorSurat={nomorSurat}
-              tanggalSurat={tanggalSurat}
-              tembusanList={tembusanList}
-            />
+            <div id="skgb-form-preview-container">
+              <PrintTemplate
+                pegawai={activePegawai}
+                settings={settings}
+                nomorSurat={nomorSurat}
+                tanggalSurat={tanggalSurat}
+                tembusanList={tembusanList}
+              />
+            </div>
           </div>
-        </div>
+        </div> </div>
 
       </div>
     </div>
